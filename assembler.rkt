@@ -9,8 +9,11 @@
   (struct-out variable)
   (struct-out assignment)
   (struct-out data)
-  current-variable-table
-  get-variable-value)
+  number
+  modifier)
+
+(require
+  racket/list)
 
 (struct program (source-tree expressions) #:transparent)
 (struct line (expression comment) #:transparent)
@@ -19,6 +22,77 @@
 (struct variable (value immediate? indexed?) #:transparent)
 (struct assignment (name value) #:transparent)
 (struct data (tag values) #:transparent)
+
+; first list index is least significant byte
+; second list index is most significant byte
+; inh: inherent       rel: relative
+; imm: immediate      dir: direct
+; ext: extended       idx: indexed
+(define code-table
+  '([(        ) (sba  inh) (bra  rel) (tsx  inh)
+     (nega inh) (negb inh) (neg  idx) (neg  ext)
+     (suba imm) (suba dir) (suba idx) (suba ext)
+     (subb imm) (subb dir) (subb idx) (subb ext)]
+    [(nop  inh) (cba  inh) (        ) (ins  inh)
+     (        ) (        ) (        ) (        )
+     (cmpa imm) (cmpa dir) (cmpa idx) (cmpa ext)
+     (cmpb imm) (cmpb dir) (cmpb idx) (cmpb ext)]
+    [(        ) (        ) (bhi  rel) (pula inh)
+     (        ) (        ) (        ) (        )
+     (sbca imm) (sbca dir) (sbca idx) (sbca ext)
+     (sbcb imm) (sbcb dir) (sbcb idx) (sbcb ext)]
+    [(        ) (        ) (bls  rel) (pulb inh)
+     (coma inh) (comb inh) (com  idx) (com  ext)
+     (        ) (        ) (        ) (        )
+     (        ) (        ) (        ) (        )]
+    [(        ) (        ) (bcc  rel) (des  inh)
+     (lsra inh) (lsrb inh) (lsr  idx) (lsr  ext)
+     (anda imm) (anda dir) (anda idx) (anda ext)
+     (andb imm) (andb dir) (andb idx) (andb ext)]
+    [(        ) (        ) (bcs  rel) (txs  inh)
+     (        ) (        ) (        ) (        )
+     (bita imm) (bita dir) (bita idx) (bita ext)
+     (bitb imm) (bitb dir) (bitb idx) (bitb ext)]
+    [(tap  inh) (tab  inh) (bne  rel) (psha inh)
+     (rora inh) (rorb inh) (ror  idx) (ror  ext)
+     (ldaa imm) (ldaa dir) (ldaa idx) (ldaa ext)
+     (ldab imm) (ldab dir) (ldab idx) (ldab ext)]
+    [(tpa  inh) (tba  inh) (beq  rel) (pshb inh)
+     (asra inh) (asrb inh) (asr  idx) (asr  ext)
+     (        ) (staa dir) (staa idx) (staa ext)
+     (        ) (stab dir) (stab idx) (stab ext)]
+    [(inx  inh) (        ) (bvc  rel) (        )
+     (asla inh) (aslb inh) (asl  idx) (asl  ext)
+     (eora imm) (eora dir) (eora idx) (eora ext)
+     (eorb imm) (eorb dir) (eorb idx) (eorb ext)]
+    [(dex  inh) (daa  inh) (bvs  rel) (rts  inh)
+     (rola inh) (rolb inh) (rol  idx) (rol  ext)
+     (adca imm) (adca dir) (adca idx) (adca ext)
+     (adcb imm) (adcb dir) (adcb idx) (adcb ext)]
+    [(clv  inh) (        ) (bpl  rel) (        )
+     (deca inh) (decb inh) (dec  idx) (dec  ext)
+     (oraa imm) (oraa dir) (oraa idx) (oraa ext)
+     (orab imm) (orab dir) (orab idx) (orab ext)]
+    [(sev  inh) (aba  inh) (bmi  rel) (rti  inh)
+     (        ) (        ) (        ) (        )
+     (adda imm) (adda dir) (adda idx) (adda ext)
+     (addb imm) (addb dir) (addb idx) (addb ext)]
+    [(clc  inh) (        ) (bge  rel) (        )
+     (inca inh) (incb inh) (inc  idx) (inc  ext)
+     (cpx  imm) (cpx  dir) (cpx  idx) (cpx  ext)
+     (        ) (        ) (        ) (        )]
+    [(sec  inh) (        ) (blt  rel) (        )
+     (tsta inh) (tstb inh) (tst  idx) (tst  ext)
+     (bsr  rel) (        ) (jsr  idx) (jsr  ext)
+     (        ) (        ) (        ) (        )]
+    [(cli  inh) (        ) (bgt  rel) (wai  inh)
+     (        ) (        ) (jmp  idx) (jmp  ext)
+     (lds  imm) (lds  dir) (lds  idx) (lds  ext)
+     (ldx  imm) (ldx  dir) (ldx  idx) (ldx  ext)]
+    [(sei  inh) (        ) (ble  rel) (swi  inh)
+     (clra inh) (clrb inh) (clr  idx) (clr  ext)
+     (        ) (sts  dir) (sts  idx) (sts  ext)
+     (        ) (stx  dir) (stx  idx) (stx  ext)]))
 
 (define current-pc (make-parameter 0))
 
@@ -41,11 +115,15 @@
            (cons pc binary))]))))
 
 (define current-variable-table (make-parameter (make-hash)))
-(define (get-variable-value var)
-  (let ([val (variable-value var)])
-    (if (symbol? val)
-        (hash-ref (current-variable-table) val)
-        val)))
+(define (get-variable-value val)
+  (cond
+    [(symbol? val) (hash-ref (current-variable-table) val)]
+    [(procedure? val) (val)]
+    [else val]))
+
+(define (modifier func amount value)
+  (lambda ()
+    (func (get-variable-value value) amount)))
 
 (define (add-variable! name value)
   (hash-set! (current-variable-table) name value))
@@ -70,7 +148,95 @@
   (list #xDA #xDA))
 
 (define (instruction->binary instr)
-  (list #xAB #xCD #xEF))
+  (define operands (instruction-operands instr))
+  (define mnemonic (instruction-mnemonic instr))
+  (when (and (pair? operands)
+             (register? (car operands)))
+    (set! mnemonic
+          (symbol-append mnemonic
+                         (register-value (car operands))))
+    (set! operands (drop operands 1)))
+  (define var #f)
+  (define value #f)
+  (when (and (pair? operands)
+             (variable? (car operands)))
+    (set! var (car operands))
+    (set! value (get-variable-value (variable-value var))))
+  (define mode
+    (if var
+        (cond
+          [(variable-indexed? var) 'idx]
+          [(variable-immediate? var) 'imm]
+          [(> value #xFF) 'ext]
+          [(relative-op? mnemonic) 'rel]
+          [else 'dir])
+        'inh))
+  (define opcode (if (padding-op? mnemonic)
+                     #t ; we don't care
+                     (find-opcode mnemonic mode)))
+  (define final-value (format-value value mnemonic mode))
+  (cond
+    [(padding-op? mnemonic) (list final-value)]
+    [(eq? mode 'inh) (list opcode)]
+    [else (list opcode final-value)]))
+
+(define (relative-op? mnemonic)
+  (find-mnemonic mnemonic 'rel))
+
+(define (padding-op? mnemonic)
+  (memq mnemonic '(db dw)))
+
+(define (16bit-opcode? mnemonic)
+  (memq mnemonic '(lds ldx cpx)))
+
+(define (format-value value mnemonic mode)
+  (define size (get-value-size mnemonic mode))
+  (and (> 0 size)
+       value))
+
+(define (get-value-size mnemonic mode)
+  (cond
+    [(padding-op? mnemonic)
+     (if (eq? mnemonic 'dw) 2 1)]
+    [(eq? mode 'inh) 0]
+    [(eq? mode 'dir) 1]
+    [(eq? mode 'idx) 1]
+    [(eq? mode 'rel) 1]
+    [(eq? mode 'ext) 2]
+    [(and (eq? mode 'imm)
+          (16bit-opcode? mnemonic)) 2]
+    [(eq? mode 'imm) 1]))
+
+(define (find-mnemonic mnemonic mode)
+  (for/or ([line code-table])
+    (findf (mnemonic-predicate mnemonic mode) line)))
+
+(define (find-opcode mnemonic mode)
+  (define line #f)
+  (define cell
+    (for/or ([current-line code-table])
+      (define found (findf (mnemonic-predicate mnemonic mode) current-line))
+      (set! line current-line)
+      found))
+  (if (and line cell)
+      (let ([lsb (index-of code-table line)]
+            [msb (index-of line cell)])
+        (cons msb lsb))
+      (error 'opcode "Not found: (~a ~a)" mnemonic mode)))
+
+(define (mnemonic-predicate mnemonic mode)
+  (lambda (elt)
+    (and (pair? elt)
+         (eq? (car elt) mnemonic)
+         (eq? (cadr elt) mode))))
 
 (define (binary->s-record bytes #:header [head-string #f])
   bytes)
+
+(define (symbol-append sym-a sym-b)
+  (string->symbol
+    (string-append (symbol->string sym-a)
+                   (symbol->string sym-b))))
+
+(define (number str)
+  42)

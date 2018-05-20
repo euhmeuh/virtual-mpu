@@ -4,15 +4,13 @@
                      #%module-begin)
          (rename-out [module-begin #%module-begin])
          assembly
-         program
          line
          instruction
          assignment
          data-decl
          operand
          value
-         number
-         modifier)
+         (rename-out [asm:number number]))
 
 (require
   (prefix-in asm: "assembler.rkt"))
@@ -23,11 +21,8 @@
     (define program asm)))
 
 (define-syntax-rule (assembly line ...)
-  (program (list 'line ...)
-           (list line ...)))
-
-(define (program source-tree lines)
-  (asm:program source-tree (map asm:line-expression lines)))
+  (asm:program (list 'line ...)
+               (map asm:line-expression (list line ...))))
 
 (define-syntax line
   (syntax-rules (comment)
@@ -61,19 +56,11 @@
     [(_ (register reg)) (asm:register 'reg)]
     [(_ val) (asm:variable (value val) #f #f)]
     [(_ val (indexed)) (asm:variable (value val) #f #t)]
-    [(_ val (modifier func amount)) (modifier func amount (asm:variable (value val) #f #f))]
+    [(_ val (modifier func amount)) (asm:variable (asm:modifier func amount (value val)) #f #f)]
+    [(_ val (modifier func amount) (indexed)) (asm:variable (asm:modifier func amount (value val)) #f #t)]
     [(_ (immediate) val) (asm:variable (value val) #t #f)]))
 
 (define-syntax value
-  (syntax-rules (number)
-    [(_ (number val)) (number val)]
+  (syntax-rules ()
+    [(_ (number val)) (asm:number val)]
     [(_ val) 'val]))
-
-(define (number str)
-  42)
-
-(define (modifier func amount var)
-  (lambda ()
-    (struct-copy asm:variable var
-                 [value (func (asm:get-variable-value var)
-                              amount)])))
