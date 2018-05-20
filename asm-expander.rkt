@@ -27,7 +27,7 @@
            (list line ...)))
 
 (define (program source-tree lines)
-  (asm:program source-tree (map asm:line-instruction lines)))
+  (asm:program source-tree (map asm:line-expression lines)))
 
 (define-syntax line
   (syntax-rules (comment)
@@ -73,6 +73,7 @@
   42)
 
 (define (modifier func amount var)
-  (struct-copy asm:variable var
-               [value (func (asm:get-variable-value var)
-                            amount)]))
+  (lambda ()
+    (struct-copy asm:variable var
+                 [value (func (asm:get-variable-value var)
+                              amount)])))
