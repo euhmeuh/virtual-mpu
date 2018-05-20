@@ -2,11 +2,77 @@
 
 (provide (except-out (all-from-out racket/base)
                      #%module-begin)
-         (rename-out [module-begin #%module-begin]))
+         (rename-out [module-begin #%module-begin])
+         assembly
+         program
+         line
+         instruction
+         assignment
+         data-decl
+         operand
+         value
+         number
+         modifier)
 
-(define-syntax-rule (module-begin tree)
+(require
+  (prefix-in asm: "assembler.rkt"))
+
+(define-syntax-rule (module-begin asm)
   (#%module-begin
-    (provide instructions)
-    (define instructions 'tree)))
+    (provide program)
+    (define program asm)))
 
-(struct instruction (tag mnemonic operands comment))
+(define-syntax-rule (assembly line ...)
+  (program (list 'line ...)
+           (list line ...)))
+
+(define (program source-tree lines)
+  (asm:program source-tree (map asm:line-instruction lines)))
+
+(define-syntax line
+  (syntax-rules (comment)
+    [(_ instruction)
+     (asm:line instruction #f)]
+    [(_ instruction (comment a-comment))
+     (asm:line instruction a-comment)]))
+
+(define-syntax instruction
+  (syntax-rules (tag mnemonic)
+    [(_) #f]
+    [(_ (tag a-tag) (mnemonic a-mnemonic) operand ...)
+     (asm:instruction (value a-tag) 'a-mnemonic (list operand ...))]
+    [(_ (mnemonic a-mnemonic) operand ...)
+     (asm:instruction #f 'a-mnemonic (list operand ...))]))
+
+(define-syntax data-decl
+  (syntax-rules (tag)
+    [(_ (tag a-tag) datum ...)
+     (asm:data (value a-tag) (list datum ...))]
+    [(_ datum ...)
+     (asm:data #f (list datum ...))]))
+
+(define-syntax assignment
+  (syntax-rules ()
+    [(_ name val)
+     (asm:assignment 'name val)]))
+
+(define-syntax operand
+  (syntax-rules (register immediate modifier)
+    [(_ (register reg)) (asm:register 'reg)]
+    [(_ val) (asm:variable (value val) #f #f)]
+    [(_ val (indexed)) (asm:variable (value val) #f #t)]
+    [(_ val (modifier func amount)) (modifier func amount (asm:variable (value val) #f #f))]
+    [(_ (immediate) val) (asm:variable (value val) #t #f)]))
+
+(define-syntax value
+  (syntax-rules (number)
+    [(_ (number val)) (number val)]
+    [(_ val) 'val]))
+
+(define (number str)
+  42)
+
+(define (modifier func amount var)
+  (struct-copy asm:variable var
+               [value (func (asm:get-variable-value var)
+                            amount)]))

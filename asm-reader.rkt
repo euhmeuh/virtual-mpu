@@ -34,7 +34,7 @@
              (:+ (:or numeric
                       (char-range "a" "f")
                       (char-range "A" "F")))) (token 'NUMBER lexeme)]
-        [(:or "a" "b" "+" "-" "*" "/" "=" ".data" "#" ",x") lexeme]
+        [(:or "a" "b" "+" "-" "*" "/" "=" ".data" "#" ",x") (string->symbol lexeme)]
         [(:>= 2 alphabetic) (token 'ID (string->symbol lexeme))]
         [(from/to "\"" "\"") (token 'STRING (trim-ends "\"" lexeme "\""))]
         [any-char (next-token)]))

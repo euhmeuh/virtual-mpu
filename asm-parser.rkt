@@ -1,5 +1,5 @@
 #lang brag
-program: [line] (/NEWLINE line)*
+assembly: [line] (/NEWLINE line)*
 line: (instruction | assignment | data-decl | /SPACE* | comment) /SPACE* [comment]
 
 instruction: [tag] [/SPACE+ mnemonic (/SPACE+ operand)*]
