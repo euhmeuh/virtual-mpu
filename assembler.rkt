@@ -202,8 +202,10 @@
 
 (define (format-value value mnemonic mode)
   (define size (get-value-size mnemonic mode))
-  (and (> size 0)
-       value))
+  (if (eq? mode 'rel)
+      (cons 'relative value) ; delay the value for second pass processing
+      (and (> size 0)
+           value)))
 
 (define (format-7bit-signed value)
   (if (or (> value 127) (< value -128))
@@ -254,10 +256,11 @@
     (define pos (car pos&byte))
     (define bytes (cdr pos&byte))
     (cons pos (map (lambda (byte)
-                     (if (symbol? byte)
-                         (format-7bit-signed
-                           (- (resolve-value byte) (+ pos 2)))
-                         byte))
+                     (match byte
+                       [(cons 'relative value)
+                        (format-7bit-signed
+                           (- (resolve-value value) (+ pos 2)))]
+                       [_ byte]))
                    bytes))))
 
 (define (symbol-append sym-a sym-b)
