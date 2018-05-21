@@ -13,6 +13,7 @@
   modifier)
 
 (require
+  racket/string
   racket/list
   racket/match)
 
@@ -101,7 +102,12 @@
   (define program (dynamic-require filepath 'program))
   (binary->s-record
     #:header header
-    (for/list ([expr (filter values (program-expressions program))])
+    (resolve-relative-branches
+      (walk-expressions (filter values (program-expressions program))))))
+
+(define (walk-expressions expressions)
+  (filter values
+    (for/list ([expr expressions])
       (cond
         [(assignment? expr)
          (add-variable! (assignment-name expr)
@@ -199,6 +205,11 @@
   (and (> size 0)
        value))
 
+(define (format-7bit-signed value)
+  (if (or (> value 127) (< value -128))
+      (error 'relative-value "outside of range (-128, 127): ~a" value)
+      (if (>= value 0) value (+ 256 value))))
+
 (define (get-value-size mnemonic mode)
   (cond
     [(padding-op? mnemonic)
@@ -235,8 +246,19 @@
          (eq? (car elt) mnemonic)
          (eq? (cadr elt) mode))))
 
-(define (binary->s-record bytes #:header [head-string #f])
-  bytes)
+(define (binary->s-record pos&bytes #:header [head-string #f])
+  pos&bytes)
+
+(define (resolve-relative-branches pos&bytes)
+  (for/list ([pos&byte pos&bytes])
+    (define pos (car pos&byte))
+    (define bytes (cdr pos&byte))
+    (cons pos (map (lambda (byte)
+                     (if (symbol? byte)
+                         (format-7bit-signed
+                           (- (resolve-value byte) (+ pos 2)))
+                         byte))
+                   bytes))))
 
 (define (symbol-append sym-a sym-b)
   (string->symbol
@@ -244,4 +266,6 @@
                    (symbol->string sym-b))))
 
 (define (number str)
-  42)
+  (if (string-prefix? str "$")
+      (string->number (substring str 1) 16)
+      (string->number str)))
