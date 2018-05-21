@@ -116,15 +116,15 @@
            (cons pc binary))]))))
 
 (define current-variable-table (make-parameter (make-hash)))
-(define (get-variable-value val)
+(define (resolve-value val)
   (cond
-    [(symbol? val) (hash-ref (current-variable-table) val)]
+    [(symbol? val) (hash-ref (current-variable-table) val val)]
     [(procedure? val) (val)]
     [else val]))
 
 (define (modifier func amount value)
   (lambda ()
-    (func (get-variable-value value) amount)))
+    (func (resolve-value value) amount)))
 
 (define (add-variable! name value)
   (hash-set! (current-variable-table) name value))
@@ -149,27 +149,16 @@
   (list #xDA #xDA))
 
 (define (instruction->binary instr)
-  (define operands (instruction-operands instr))
-  (define mnemonic (instruction-mnemonic instr))
-  (when (and (pair? operands)
-             (register? (car operands)))
-    (set! mnemonic
-          (symbol-append mnemonic
-                         (register-value (car operands))))
-    (set! operands (drop operands 1)))
-  (define var #f)
-  (define value #f)
-  (when (and (pair? operands)
-             (variable? (car operands)))
-    (set! var (car operands))
-    (set! value (get-variable-value (variable-value var))))
+  (define-values (mnemonic operands) (resolve-operands instr))
+  (define var (try-get-variable operands))
+  (define value (and var (resolve-value (variable-value var))))
   (define mode
     (if var
         (cond
+          [(relative-op? mnemonic) 'rel]
           [(variable-indexed? var) 'idx]
           [(variable-immediate? var) 'imm]
           [(> value #xFF) 'ext]
-          [(relative-op? mnemonic) 'rel]
           [else 'dir])
         'inh))
   (define opcode (and (not (padding-op? mnemonic))
@@ -179,6 +168,22 @@
     [(not opcode) (list final-value)]
     [(not final-value) (list opcode)]
     [else (list opcode final-value)]))
+
+(define (resolve-operands instr)
+  (define operands (instruction-operands instr))
+  (define mnemonic (instruction-mnemonic instr))
+  (when (and (pair? operands)
+             (register? (car operands)))
+    (set! mnemonic
+          (symbol-append mnemonic
+                         (register-value (car operands))))
+    (set! operands (drop operands 1)))
+  (values mnemonic operands))
+
+(define (try-get-variable operands)
+  (and (pair? operands)
+       (variable? (car operands))
+       (car operands)))
 
 (define (relative-op? mnemonic)
   (find-mnemonic mnemonic 'rel))
@@ -191,7 +196,7 @@
 
 (define (format-value value mnemonic mode)
   (define size (get-value-size mnemonic mode))
-  (and (> 0 size)
+  (and (> size 0)
        value))
 
 (define (get-value-size mnemonic mode)
