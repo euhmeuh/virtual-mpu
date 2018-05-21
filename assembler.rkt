@@ -13,7 +13,8 @@
   modifier)
 
 (require
-  racket/list)
+  racket/list
+  racket/match)
 
 (struct program (source-tree expressions) #:transparent)
 (struct line (expression comment) #:transparent)
@@ -171,13 +172,12 @@
           [(relative-op? mnemonic) 'rel]
           [else 'dir])
         'inh))
-  (define opcode (if (padding-op? mnemonic)
-                     #t ; we don't care
-                     (find-opcode mnemonic mode)))
+  (define opcode (and (not (padding-op? mnemonic))
+                      (find-opcode mnemonic mode)))
   (define final-value (format-value value mnemonic mode))
   (cond
-    [(padding-op? mnemonic) (list final-value)]
-    [(eq? mode 'inh) (list opcode)]
+    [(not opcode) (list final-value)]
+    [(not final-value) (list opcode)]
     [else (list opcode final-value)]))
 
 (define (relative-op? mnemonic)
@@ -212,13 +212,13 @@
     (findf (mnemonic-predicate mnemonic mode) line)))
 
 (define (find-opcode mnemonic mode)
-  (define line #f)
-  (define cell
+  (match-define
+    (list cell line)
     (for/or ([current-line code-table])
       (define found (findf (mnemonic-predicate mnemonic mode) current-line))
-      (set! line current-line)
-      found))
-  (if (and line cell)
+      (and found current-line
+           (list found current-line))))
+  (if (and cell line)
       (let ([lsb (index-of code-table line)]
             [msb (index-of line cell)])
         (cons msb lsb))
