@@ -10,7 +10,9 @@
   (struct-out assignment)
   (struct-out data)
   number
-  modifier)
+  modifier
+  current-value-table
+  resolve-value)
 
 (require
   racket/string
@@ -97,6 +99,7 @@
      (        ) (stx  dir) (stx  idx) (stx  ext)]))
 
 (define current-pc (make-parameter 0))
+(define current-value-table (make-parameter (make-hash)))
 
 (define (assemble filepath [header #f])
   (define program (dynamic-require filepath 'program))
@@ -121,19 +124,19 @@
            (advance-pc! (length binary))
            (cons pc binary))]))))
 
-(define current-variable-table (make-parameter (make-hash)))
 (define (resolve-value val)
   (cond
-    [(symbol? val) (hash-ref (current-variable-table) val val)]
+    [(symbol? val) (hash-ref (current-value-table) val val)]
     [(procedure? val) (val)]
     [else val]))
 
-(define (modifier func amount value)
+(define (modifier func value amount)
   (lambda ()
-    (func (resolve-value value) amount)))
+    (func (resolve-value value)
+          (resolve-value amount))))
 
 (define (add-variable! name value)
-  (hash-set! (current-variable-table) name value))
+  (hash-set! (current-value-table) name value))
 
 (define (handle-tag! expr)
   (define tag (if (data? expr)

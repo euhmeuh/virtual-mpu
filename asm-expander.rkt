@@ -56,11 +56,83 @@
     [(_ (register reg)) (asm:register 'reg)]
     [(_ val) (asm:variable (value val) #f #f)]
     [(_ val (indexed)) (asm:variable (value val) #f #t)]
-    [(_ val (modifier func amount)) (asm:variable (asm:modifier func amount (value val)) #f #f)]
-    [(_ val (modifier func amount) (indexed)) (asm:variable (asm:modifier func amount (value val)) #f #t)]
+    [(_ val (modifier func amount)) (asm:variable (asm:modifier func (value val) (value amount)) #f #f)]
+    [(_ val (modifier func amount) (indexed)) (asm:variable (asm:modifier func (value val) (value amount)) #f #t)]
     [(_ (immediate) val) (asm:variable (value val) #t #f)]))
 
 (define-syntax value
   (syntax-rules ()
     [(_ (number val)) (asm:number val)]
     [(_ val) 'val]))
+
+(module+ test
+  (require rackunit)
+
+  (define-binary-check (asm-variable-equal? a b)
+    (and (equal? (asm:resolve-value (asm:variable-value a))
+                 (asm:resolve-value (asm:variable-value b)))
+         (equal? (asm:variable-immediate? a)
+                 (asm:variable-immediate? b))
+         (equal? (asm:variable-indexed? a)
+                 (asm:variable-indexed? b))))
+
+  (asm:current-value-table #hash([banana . 42]))
+
+  (check-equal? (operand (register a))
+                (asm:register 'a))
+
+  (asm-variable-equal?
+    (operand (number "$80"))
+    (asm:variable #x80 #f #f))
+
+  (asm-variable-equal?
+    (operand (number "$80") (indexed))
+    (asm:variable #x80 #f #t))
+
+  (asm-variable-equal?
+    (operand (number "$80") (modifier + (number "1")))
+    (asm:variable (asm:modifier + #x80 1) #f #f))
+
+  (asm-variable-equal?
+    (operand (number "$80") (modifier + (number "1")) (indexed))
+    (asm:variable (asm:modifier + #x80 1) #f #t))
+
+  (asm-variable-equal?
+    (operand (number "$80") (modifier + banana))
+    (asm:variable (asm:modifier + #x80 'banana) #f #f))
+
+  (asm-variable-equal?
+    (operand (number "$80") (modifier + banana) (indexed))
+    (asm:variable (asm:modifier + #x80 'banana) #f #t))
+
+  (asm-variable-equal?
+    (operand (immediate) (number "$80"))
+    (asm:variable #x80 #t #f))
+
+  (asm-variable-equal?
+    (operand banana)
+    (asm:variable 'banana #f #f))
+
+  (asm-variable-equal?
+    (operand banana (indexed))
+    (asm:variable 'banana #f #t))
+
+  (asm-variable-equal?
+    (operand banana (modifier + (number "1")))
+    (asm:variable (asm:modifier + 'banana 1) #f #f))
+
+  (asm-variable-equal?
+    (operand banana (modifier + (number "1")) (indexed))
+    (asm:variable (asm:modifier + 'banana 1) #f #t))
+
+  (asm-variable-equal?
+    (operand banana (modifier + banana))
+    (asm:variable (asm:modifier + 'banana 'banana) #f #f))
+
+  (asm-variable-equal?
+    (operand banana (modifier + banana) (indexed))
+    (asm:variable (asm:modifier + 'banana 'banana) #f #t))
+
+  (asm-variable-equal?
+    (operand (immediate) banana)
+    (asm:variable 'banana #t #f)))
