@@ -172,11 +172,12 @@
         'inh))
   (define opcode (and (not (padding-op? mnemonic))
                       (find-opcode mnemonic mode)))
-  (define final-value (format-value value mnemonic mode))
+  (define final-values (and value
+                            (format-value value mnemonic mode)))
   (cond
-    [(not opcode) (list final-value)]
-    [(not final-value) (list opcode)]
-    [else (list opcode final-value)]))
+    [(not opcode) final-values]
+    [(not final-values) (list opcode)]
+    [else (cons opcode final-values)]))
 
 (define (resolve-operands instr)
   (define operands (instruction-operands instr))
@@ -204,11 +205,17 @@
   (memq mnemonic '(lds ldx cpx)))
 
 (define (format-value value mnemonic mode)
-  (define size (get-value-size mnemonic mode))
   (if (eq? mode 'rel)
-      (cons 'relative value) ; delay the value for second pass processing
-      (and (> size 0)
-           value)))
+      (list (cons 'relative value)) ; delay the value for second pass processing
+      (split-into-bytes '() value (get-value-size mnemonic mode))))
+
+(define (split-into-bytes result value [size #f])
+    (if (or (<= value #xFF)
+            (and size (<= size 1)))
+        (cons value result)
+        (split-into-bytes (cons (bitwise-and value #xFF) result)
+                          (arithmetic-shift value -8)
+                          (and size (- size 1)))))
 
 (define (format-7bit-signed value)
   (if (or (> value 127) (< value -128))
@@ -242,7 +249,7 @@
   (if (and cell line)
       (let ([lsb (index-of code-table line)]
             [msb (index-of line cell)])
-        (cons msb lsb))
+        (+ (arithmetic-shift msb 4) lsb))
       (error 'opcode "Not found: (~a ~a)" mnemonic mode)))
 
 (define (mnemonic-predicate mnemonic mode)
