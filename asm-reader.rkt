@@ -23,7 +23,7 @@
   (port-count-lines! port)
   (lexer-file-path path)
   (define (next-token)
-    (define bf-lexer
+    (define asm-lexer
       (lexer-srcloc
         [(eof) (return-without-srcloc eof)]
         [(from/stop-before ";" "\n") (token 'COMMENT (trim-ends ";" lexeme ""))]
@@ -38,5 +38,5 @@
         [(:>= 2 alphabetic) (token 'ID (string->symbol lexeme))]
         [(from/to "\"" "\"") (token 'STRING (trim-ends "\"" lexeme "\""))]
         [any-char (next-token)]))
-    (bf-lexer port))
+    (asm-lexer port))
   next-token)
