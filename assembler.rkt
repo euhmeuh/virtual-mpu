@@ -204,7 +204,8 @@
       (when (<= (bytes-length bytestring) pos)
         (set! bytestring
               (bytes-append bytestring
-                            (make-bytes (current-generated-block-size)))))
+                            (make-bytes (* (current-generated-block-size)
+                                           (/ pos (current-generated-block-size)))))))
       (bytes-set! bytestring (+ pos i) byte))
     bytestring))
 
