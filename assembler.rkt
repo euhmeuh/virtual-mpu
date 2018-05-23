@@ -158,7 +158,14 @@
       (instruction->binary expr)))
 
 (define (data->binary data)
-  (list #xDA #xDA))
+  (for/fold ([result '()])
+            ([value (data-values data)])
+    (append result
+            (cond
+              [(string? value)
+               (bytes->list (string->bytes/utf-8 value))]
+              [else
+               (split-into-bytes '() value)]))))
 
 (define (instruction->binary instr)
   (define-values (mnemonic operands) (resolve-operands instr))
