@@ -19,7 +19,8 @@
   racket/list
   racket/match
   (only-in racket/contract/base >/c)
-  anaphoric)
+  anaphoric
+  "utils.rkt")
 
 (struct program (source-tree expressions) #:transparent)
 (struct line (expression comment) #:transparent)
@@ -102,11 +103,13 @@
 
 (define current-pc (make-parameter 0))
 (define current-value-table (make-parameter (make-hash)))
+(define current-generated-block-size (make-parameter 32))
 
 (define (assemble filepath)
   (define program (dynamic-require filepath 'program))
-  (resolve-relative-branches
-    (walk-expressions (filter values (program-expressions program)))))
+  (build-bytestring
+    (resolve-relative-branches
+      (walk-expressions (filter values (program-expressions program))))))
 
 (define (walk-expressions expressions)
   (filter values
@@ -181,7 +184,7 @@
     (awhen (findf (>/c #xFF) final-values)
       (error 'value-too-large
              "The given value is larger than a byte: ~a"
-             (hex it))))
+             (format-hex it))))
   (cond
     [(not opcode) final-values]
     [(not final-values) (list opcode)]
@@ -280,17 +283,18 @@
                  [byte byte])
                bytes))))
 
-(define (symbol-append sym-a sym-b)
-  (string->symbol
-    (string-append (symbol->string sym-a)
-                   (symbol->string sym-b))))
-
-(define (hex value)
-  (local-require (only-in racket/format ~r))
-  (~r #:base '(up 16)
-      #:min-width 4
-      #:pad-string "0"
-      value))
+(define (build-bytestring pos&bytes)
+  (for/fold ([bytestring (make-bytes (current-generated-block-size))])
+            ([pos&byte pos&bytes])
+    (define pos (car pos&byte))
+    (define bytes (cdr pos&byte))
+    (for ([byte bytes] [i (in-naturals)])
+      (when (<= (bytes-length bytestring) pos)
+        (set! bytestring
+              (bytes-append bytestring
+                            (make-bytes (current-generated-block-size)))))
+      (bytes-set! bytestring (+ pos i) byte))
+    bytestring))
 
 (define (format-mode mode)
   (match mode

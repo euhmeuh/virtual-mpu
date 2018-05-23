@@ -2,11 +2,12 @@
 
 (require
   racket/cmdline
-  "assembler.rkt")
+  "assembler.rkt"
+  "s-record.rkt")
 
 (define-values
   (filepath)
   (command-line
     #:args (file) file))
 
-(assemble filepath)
+(bytes->s-record (assemble filepath))

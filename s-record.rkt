@@ -1,7 +1,7 @@
 #lang racket/base
 
 (provide
-  binary->s-record)
+  bytes->s-record)
 
-(define (binary->s-record bytes #:header [head-string #f])
+(define (bytes->s-record bytes #:header [head-string #f])
   bytes)
