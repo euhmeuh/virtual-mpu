@@ -9,9 +9,9 @@
     (string-append (symbol->string sym-a)
                    (symbol->string sym-b))))
 
-(define (format-hex value)
+(define (format-hex value #:min-width [min-width 4])
   (local-require (only-in racket/format ~r))
   (~r #:base '(up 16)
-      #:min-width 4
+      #:min-width min-width
       #:pad-string "0"
       value))

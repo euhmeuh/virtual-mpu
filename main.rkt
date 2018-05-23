@@ -2,12 +2,17 @@
 
 (require
   racket/cmdline
+  racket/function
+  racket/string
   "assembler.rkt"
-  "s-record.rkt")
+  "utils.rkt")
 
 (define-values
   (filepath)
   (command-line
     #:args (file) file))
 
-(bytes->s-record (assemble filepath))
+(displayln
+  (string-join
+    (map (curry format-hex #:min-width 2)
+         (bytes->list (assemble filepath)))))
