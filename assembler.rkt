@@ -17,7 +17,9 @@
 (require
   racket/string
   racket/list
-  racket/match)
+  racket/match
+  (only-in racket/contract/base >/c)
+  anaphoric)
 
 (struct program (source-tree expressions) #:transparent)
 (struct line (expression comment) #:transparent)
@@ -101,12 +103,10 @@
 (define current-pc (make-parameter 0))
 (define current-value-table (make-parameter (make-hash)))
 
-(define (assemble filepath [header #f])
+(define (assemble filepath)
   (define program (dynamic-require filepath 'program))
-  (binary->s-record
-    #:header header
-    (resolve-relative-branches
-      (walk-expressions (filter values (program-expressions program))))))
+  (resolve-relative-branches
+    (walk-expressions (filter values (program-expressions program)))))
 
 (define (walk-expressions expressions)
   (filter values
@@ -161,6 +161,10 @@
   (define-values (mnemonic operands) (resolve-operands instr))
   (define var (try-get-variable operands))
   (define value (and var (resolve-value (variable-value var))))
+  (when (and value
+             (symbol? value)
+             (not (relative-op? mnemonic)))
+    (error 'variable-not-found "The given variable was not declared: ~a" value))
   (define mode
     (if var
         (cond
@@ -170,10 +174,14 @@
           [(> value #xFF) 'ext]
           [else 'dir])
         'inh))
-  (define opcode (and (not (padding-op? mnemonic))
+  (define opcode (and (not (pseudo-op? mnemonic))
                       (find-opcode mnemonic mode)))
-  (define final-values (and value
-                            (format-value value mnemonic mode)))
+  (define final-values (and value (format-value value mnemonic mode)))
+  (when final-values
+    (awhen (findf (>/c #xFF) final-values)
+      (error 'value-too-large
+             "The given value is larger than a byte: ~a"
+             (hex it))))
   (cond
     [(not opcode) final-values]
     [(not final-values) (list opcode)]
@@ -198,7 +206,7 @@
 (define (relative-op? mnemonic)
   (find-mnemonic mnemonic 'rel))
 
-(define (padding-op? mnemonic)
+(define (pseudo-op? mnemonic)
   (memq mnemonic '(db dw)))
 
 (define (16bit-opcode? mnemonic)
@@ -224,7 +232,7 @@
 
 (define (get-value-size mnemonic mode)
   (cond
-    [(padding-op? mnemonic)
+    [(pseudo-op? mnemonic)
      (if (eq? mnemonic 'dw) 2 1)]
     [(eq? mode 'inh) 0]
     [(eq? mode 'dir) 1]
@@ -240,17 +248,19 @@
     (findf (mnemonic-predicate mnemonic mode) line)))
 
 (define (find-opcode mnemonic mode)
-  (match-define
-    (list cell line)
+  (define cell&line
     (for/or ([current-line code-table])
-      (define found (findf (mnemonic-predicate mnemonic mode) current-line))
-      (and found current-line
-           (list found current-line))))
-  (if (and cell line)
-      (let ([lsb (index-of code-table line)]
-            [msb (index-of line cell)])
+      (let ([found (findf (mnemonic-predicate mnemonic mode) current-line)])
+        (and found (cons found current-line)))))
+  (if cell&line
+      (let* ([cell (car cell&line)]
+             [line (cdr cell&line)]
+             [lsb (index-of code-table line)]
+             [msb (index-of line cell)])
         (+ (arithmetic-shift msb 4) lsb))
-      (error 'opcode "Not found: (~a ~a)" mnemonic mode)))
+      (error 'opcode-not-found
+             "The given operation was not found: ~a in ~a mode"
+             mnemonic (format-mode mode))))
 
 (define (mnemonic-predicate mnemonic mode)
   (lambda (elt)
@@ -258,25 +268,38 @@
          (eq? (car elt) mnemonic)
          (eq? (cadr elt) mode))))
 
-(define (binary->s-record pos&bytes #:header [head-string #f])
-  pos&bytes)
-
 (define (resolve-relative-branches pos&bytes)
   (for/list ([pos&byte pos&bytes])
     (define pos (car pos&byte))
     (define bytes (cdr pos&byte))
-    (cons pos (map (lambda (byte)
-                     (match byte
-                       [(cons 'relative value)
-                        (format-7bit-signed
-                           (- (resolve-value value) (+ pos 2)))]
-                       [_ byte]))
-                   bytes))))
+    (cons pos
+          (map (match-lambda
+                 [(cons 'relative value)
+                  (format-7bit-signed
+                     (- (resolve-value value) (+ pos 2)))]
+                 [byte byte])
+               bytes))))
 
 (define (symbol-append sym-a sym-b)
   (string->symbol
     (string-append (symbol->string sym-a)
                    (symbol->string sym-b))))
+
+(define (hex value)
+  (local-require (only-in racket/format ~r))
+  (~r #:base '(up 16)
+      #:min-width 4
+      #:pad-string "0"
+      value))
+
+(define (format-mode mode)
+  (match mode
+    ['inh "inherent"]
+    ['rel "relative"]
+    ['imm "immediate"]
+    ['dir "direct"]
+    ['ext "extended"]
+    ['idx "indexed"]))
 
 (define (number str)
   (if (string-prefix? str "$")
