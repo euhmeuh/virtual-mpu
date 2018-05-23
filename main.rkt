@@ -14,5 +14,5 @@
 
 (displayln
   (string-join
-    (map (curry format-hex #:min-width 2)
+    (map (curry format-hex)
          (bytes->list (assemble filepath)))))
