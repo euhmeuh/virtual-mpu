@@ -5,7 +5,8 @@ line: (instruction | assignment | data-decl | /SPACE* | comment) /SPACE* [commen
 instruction: [tag] [/SPACE+ mnemonic (/SPACE+ operand)*]
 tag: ID | number
 mnemonic: ID
-operand: register | ([immediate] number) | (number [indexed]) | (ID [modifier] [indexed])
+operand: register | ([immediate] value) | (value [indexed]) | (value [modifier] [indexed])
+@value: ID | number
 register: "a" | "b"
 immediate: /"#"
 modifier: ("+" | "-" | "*" | "/") number
