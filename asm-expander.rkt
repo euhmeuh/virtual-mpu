@@ -9,11 +9,37 @@
          assignment
          data-decl
          operand
-         value
          (rename-out [asm:number number]))
 
 (require
+  syntax/parse
+  (for-syntax
+    racket/base
+    syntax/parse)
   (prefix-in asm: "assembler.rkt"))
+
+(begin-for-syntax
+  (define-splicing-syntax-class maybe-immediate
+    #:datum-literals (immediate)
+    (pattern (~seq (immediate)) #:with immediate? #'#t)
+    (pattern (~seq) #:with immediate? #'#f))
+
+  (define-splicing-syntax-class maybe-indexed
+    #:datum-literals (indexed)
+    (pattern (~seq (indexed)) #:with indexed? #'#t)
+    (pattern (~seq) #:with indexed? #'#f))
+
+  (define-syntax-class maybe-number
+    #:datum-literals (number)
+    (pattern (number val) #:with value #'(asm:number val))
+    (pattern val #:with value #''val))
+
+  (define-splicing-syntax-class maybe-modified-value
+    #:datum-literals (modifier)
+    (pattern (~seq var:maybe-number (modifier func:id amount:maybe-number))
+             #:with value #'(asm:modifier func var.value amount.value))
+    (pattern (~seq var:maybe-number)
+             #:with value #'var.value)))
 
 (define-syntax-rule (module-begin asm)
   (#%module-begin
@@ -33,38 +59,35 @@
     [(_ instruction (comment a-comment))
      (asm:line instruction a-comment)]))
 
-(define-syntax instruction
-  (syntax-rules (tag mnemonic)
-    [(_ (tag a-tag) (mnemonic a-mnemonic) operand ...)
-     (asm:instruction (value a-tag) 'a-mnemonic (list operand ...))]
+(define-syntax (instruction stx)
+  (syntax-parse stx
+    #:datum-literals (tag mnemonic)
+    [(_ (tag a-tag:maybe-number) (mnemonic a-mnemonic) operand ...)
+     #'(asm:instruction a-tag.value 'a-mnemonic (list operand ...))]
     [(_ (mnemonic a-mnemonic) operand ...)
-     (asm:instruction #f 'a-mnemonic (list operand ...))]))
+     #'(asm:instruction #f 'a-mnemonic (list operand ...))]))
 
-(define-syntax data-decl
-  (syntax-rules (tag)
-    [(_ (tag a-tag) datum ...)
-     (asm:data (value a-tag) (list datum ...))]
+(define-syntax (data-decl stx)
+  (syntax-parse stx
+    #:datum-literals (tag)
+    [(_ (tag a-tag:maybe-number) datum ...)
+     #'(asm:data a-tag.value (list datum ...))]
     [(_ datum ...)
-     (asm:data #f (list datum ...))]))
+     #'(asm:data #f (list datum ...))]))
 
 (define-syntax assignment
   (syntax-rules ()
     [(_ name val)
      (asm:assignment 'name val)]))
 
-(define-syntax operand
-  (syntax-rules (register immediate modifier)
-    [(_ (register reg)) (asm:register 'reg)]
-    [(_ val) (asm:variable (value val) #f #f)]
-    [(_ val (indexed)) (asm:variable (value val) #f #t)]
-    [(_ val (modifier func amount)) (asm:variable (asm:modifier func (value val) (value amount)) #f #f)]
-    [(_ val (modifier func amount) (indexed)) (asm:variable (asm:modifier func (value val) (value amount)) #f #t)]
-    [(_ (immediate) val) (asm:variable (value val) #t #f)]))
-
-(define-syntax value
-  (syntax-rules ()
-    [(_ (number val)) (asm:number val)]
-    [(_ val) 'val]))
+(define-syntax (operand stx)
+  (syntax-parse stx
+    #:datum-literals (register)
+    [(_ (register reg)) #'(asm:register 'reg)]
+    [(_ mi:maybe-immediate mv:maybe-modified-value)
+     #'(asm:variable mv.value mi.immediate? #f)]
+    [(_ mv:maybe-modified-value mx:maybe-indexed)
+     #'(asm:variable mv.value #f mx.indexed?)]))
 
 (module+ test
   (require rackunit)
