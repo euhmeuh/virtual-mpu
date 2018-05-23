@@ -39,7 +39,7 @@
   (define program (dynamic-require filepath 'program))
   (build-bytestring
     (resolve-relative-branches
-      (walk-expressions (filter values (program-expressions program))))))
+      (walk-expressions (program-expressions program)))))
 
 (define (walk-expressions expressions)
   (filter values

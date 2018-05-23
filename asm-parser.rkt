@@ -1,6 +1,6 @@
 #lang brag
 assembly: [line] (/NEWLINE line)*
-line: (instruction | assignment | data-decl | /SPACE* | comment) /SPACE* [comment]
+line: [instruction | assignment | data-decl] /SPACE* [comment]
 
 instruction: [tag] [/SPACE+ mnemonic (/SPACE+ operand)*]
 tag: ID | number

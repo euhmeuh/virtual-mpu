@@ -22,10 +22,12 @@
 
 (define-syntax-rule (assembly line ...)
   (asm:program (list 'line ...)
-               (map asm:line-expression (list line ...))))
+               (map asm:line-expression
+                    (filter values (list line ...)))))
 
 (define-syntax line
   (syntax-rules (comment)
+    [(_) #f]
     [(_ instruction)
      (asm:line instruction #f)]
     [(_ instruction (comment a-comment))
@@ -33,7 +35,6 @@
 
 (define-syntax instruction
   (syntax-rules (tag mnemonic)
-    [(_) #f]
     [(_ (tag a-tag) (mnemonic a-mnemonic) operand ...)
      (asm:instruction (value a-tag) 'a-mnemonic (list operand ...))]
     [(_ (mnemonic a-mnemonic) operand ...)
