@@ -1,0 +1,29 @@
+#!/usr/bin/env racket
+#lang racket/base
+
+(require
+  racket/cmdline
+  racket/function
+  racket/string
+  "assembler.rkt"
+  "s-record.rkt"
+  "utils.rkt"
+  command-tree)
+
+(define (assemble-to-binary filepath)
+  (display (assemble filepath)))
+
+(define (assemble-to-hex filepath)
+  (displayln
+    (string-join
+      (map (curry format-hex)
+           (bytes->list (assemble filepath))))))
+
+(define (assemble-to-s-record filepath)
+  (bytes->s-record (assemble filepath)))
+
+(command-tree
+  `([assemble (to-binary ,assemble-to-binary)
+              (to-hex ,assemble-to-hex)
+              (to-s-record ,assemble-to-s-record)])
+  (current-command-line-arguments))
