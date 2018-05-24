@@ -206,11 +206,11 @@
     (define pos (car pos&byte))
     (define bytes (cdr pos&byte))
     (for ([byte bytes] [i (in-naturals)])
-      (when (<= (bytes-length bytestring) pos)
+      (when (<= (bytes-length bytestring) (+ pos i))
         (set! bytestring
               (bytes-append bytestring
                             (make-bytes (* (current-generated-block-size)
-                                           (/ pos (current-generated-block-size)))))))
+                                           (/ (+ pos i) (current-generated-block-size)))))))
       (bytes-set! bytestring (+ pos i) byte))
     bytestring))
 

@@ -19,8 +19,9 @@
       (map (curry format-hex)
            (bytes->list (assemble filepath))))))
 
-(define (assemble-to-s-record filepath)
-  (bytes->s-record (assemble filepath)))
+(define (assemble-to-s-record filepath [header #f])
+  (bytes->s-record (assemble filepath)
+                   #:header header))
 
 (command-tree
   `([assemble (to-binary ,assemble-to-binary)

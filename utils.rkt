@@ -2,7 +2,11 @@
 
 (provide
   symbol-append
-  format-hex)
+  format-hex
+  chunk)
+
+(require
+  racket/list)
 
 (define (symbol-append sym-a sym-b)
   (string->symbol
@@ -15,3 +19,11 @@
       #:min-width min-width
       #:pad-string "0"
       value))
+
+(define (chunk lst size)
+  (cond
+    [(and (pair? lst) (>= (length lst) size))
+     (cons (take lst size)
+           (chunk (drop lst size) size))]
+    [(pair? lst) (list lst)]
+    [else lst]))
