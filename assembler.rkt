@@ -112,6 +112,7 @@
           [(variable-indexed? var) 'idx]
           [(variable-immediate? var) 'imm]
           [(> value #xFF) 'ext]
+          [(extended-only-op? mnemonic) 'ext]
           [else 'dir])
         'inh))
   (define opcode (and (not (pseudo-op? mnemonic))
@@ -152,14 +153,18 @@
 (define (16bit-opcode? mnemonic)
   (memq mnemonic '(lds ldx cpx)))
 
+(define (extended-only-op? mnemonic)
+  (and (not (op-exists? mnemonic 'dir))
+       (op-exists? mnemonic 'ext)))
+
 (define (format-value value mnemonic mode)
   (if (eq? mode 'rel)
       (list (cons 'relative value)) ; delay the value for second pass processing
       (split-into-bytes '() value (get-value-size mnemonic mode))))
 
 (define (split-into-bytes result value [size #f])
-    (if (or (<= value #xFF)
-            (and size (<= size 1)))
+    (if (if size (<= size 1)
+                 (<= value #xFF))
         (cons value result)
         (split-into-bytes (cons (bitwise-and value #xFF) result)
                           (arithmetic-shift value -8)
