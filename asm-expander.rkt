@@ -48,16 +48,18 @@
 
 (define-syntax-rule (assembly line ...)
   (asm:program (list 'line ...)
-               (map asm:line-expression
-                    (filter values (list line ...)))))
+               (filter values (map asm:line-expression
+                                   (filter values (list line ...))))))
 
 (define-syntax line
   (syntax-rules (comment)
     [(_) #f]
-    [(_ instruction)
-     (asm:line instruction #f)]
-    [(_ instruction (comment a-comment))
-     (asm:line instruction a-comment)]))
+    [(_ (comment a-comment))
+     (asm:line #f a-comment)]
+    [(_ expression)
+     (asm:line expression #f)]
+    [(_ expression (comment a-comment))
+     (asm:line expression a-comment)]))
 
 (define-syntax (instruction stx)
   (syntax-parse stx
