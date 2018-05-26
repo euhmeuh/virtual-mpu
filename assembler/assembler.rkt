@@ -20,8 +20,8 @@
   racket/match
   (only-in racket/contract/base >/c)
   anaphoric
-  "op-table.rkt"
-  "utils.rkt")
+  "../op-table.rkt"
+  "../utils.rkt")
 
 (struct program (source-tree expressions) #:transparent)
 (struct line (expression comment) #:transparent)

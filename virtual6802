@@ -5,8 +5,9 @@
   racket/cmdline
   racket/function
   racket/string
-  "assembler.rkt"
-  "s-record.rkt"
+  "assembler/assembler.rkt"
+  "assembler/s-record.rkt"
+  "emulator/emulator.rkt"
   "utils.rkt"
   command-tree)
 
@@ -26,5 +27,6 @@
 (command-tree
   `([assemble (to-binary ,assemble-to-binary)
               (to-hex ,assemble-to-hex)
-              (to-s-record ,assemble-to-s-record)])
+              (to-s-record ,assemble-to-s-record)]
+    [emulate  ,emulate])
   (current-command-line-arguments))
