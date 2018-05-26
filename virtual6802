@@ -9,6 +9,7 @@
   "assembler/s-record.rkt"
   "emulator/emulator.rkt"
   "utils.rkt"
+  "ril011w.rkt"
   command-tree)
 
 (define (assemble-to-binary filepath)
@@ -28,5 +29,6 @@
   `([assemble (to-binary ,assemble-to-binary)
               (to-hex ,assemble-to-hex)
               (to-s-record ,assemble-to-s-record)]
-    [emulate  ,emulate])
+    [emulate  ,(lambda (kernel)
+                 (emulate kernel ril011w-memory-read ril011w-memory-write!))])
   (current-command-line-arguments))

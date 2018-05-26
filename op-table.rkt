@@ -3,7 +3,12 @@
 (provide
   op-table
   op-exists?
-  get-op-code)
+  relative-op?
+  16bit-opcode?
+  extended-only-op?
+  get-op-code
+  get-mnemonic
+  get-value-size)
 
 (require
   racket/list
@@ -80,9 +85,49 @@
      (        ) (sts  dir) (sts  idx) (sts  ext)
      (        ) (stx  dir) (stx  idx) (stx  ext)]))
 
+; There are hidden "undocumented" instructions on the 6800:
+;   0x14:  NBA   inherent   Store A & B in A
+;   0x87:  STAA  immediate  Store immediately the content of A in PC+2
+;   0xC7:  STAB  immediate  Store immediately the content of B in PC+2
+;   0xDD:  HCF   inherent   "Halt and Catch Fire": Cycle through all memory until powered off
+;                           (there's also an HCF hidden in 0x9D but let's not use it)
+;   0x8F:  STS   immediate  Store immediately the Stack Pointer in PC+2 and PC+3
+;   0xCF:  STX   immediate  Store immediately the Index Register in PC+2 and PC+3
+; The immediate stores are weird because they actually don't care about the given operand, but still require one.
+; You don't want to use them in production, because they're not garanted to have
+; been implemented in a given chip if the manufacturer just decided to ignore them.
+(define undocumented-op-codes
+  #hash([0x14 . (nba  inh)]
+        [0x87 . (staa imm)]
+        [0xC7 . (stab imm)]
+        [0xDD . (hcf  inh)]
+        [0x8F . (sts  imm)]
+        [0xCF . (stx  imm)]))
+
 (define (op-exists? mnemonic mode)
   (for/or ([line op-table])
     (findf (op-predicate mnemonic mode) line)))
+
+(define (relative-op? mnemonic)
+  (op-exists? mnemonic 'rel))
+
+(define (16bit-opcode? mnemonic)
+  (memq mnemonic '(lds ldx cpx)))
+
+(define (extended-only-op? mnemonic)
+  (and (not (op-exists? mnemonic 'dir))
+       (op-exists? mnemonic 'ext)))
+
+(define (get-value-size mnemonic mode)
+  (cond
+    [(eq? mode 'inh) 0]
+    [(eq? mode 'dir) 1]
+    [(eq? mode 'idx) 1]
+    [(eq? mode 'rel) 1]
+    [(eq? mode 'ext) 2]
+    [(and (eq? mode 'imm)
+          (16bit-opcode? mnemonic)) 2]
+    [(eq? mode 'imm) 1]))
 
 (define (get-op-code mnemonic mode)
   (define cell&line
@@ -98,6 +143,11 @@
       (error 'opcode-not-found
              "The given operation was not found: ~a in ~a mode"
              mnemonic (format-mode mode))))
+
+(define (get-mnemonic op-code)
+  (define msb (arithmetic-shift op-code -4))
+  (define lsb (bitwise-and op-code #x0F))
+  (apply values (list-ref (list-ref op-table lsb) msb)))
 
 (define (op-predicate mnemonic mode)
   (lambda (elt)

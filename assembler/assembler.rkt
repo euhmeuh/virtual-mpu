@@ -144,49 +144,15 @@
        (variable? (car operands))
        (car operands)))
 
-(define (relative-op? mnemonic)
-  (op-exists? mnemonic 'rel))
-
 (define (pseudo-op? mnemonic)
   (memq mnemonic '(db dw)))
-
-(define (16bit-opcode? mnemonic)
-  (memq mnemonic '(lds ldx cpx)))
-
-(define (extended-only-op? mnemonic)
-  (and (not (op-exists? mnemonic 'dir))
-       (op-exists? mnemonic 'ext)))
 
 (define (format-value value mnemonic mode)
   (if (eq? mode 'rel)
       (list (cons 'relative value)) ; delay the value for second pass processing
-      (split-into-bytes '() value (get-value-size mnemonic mode))))
-
-(define (split-into-bytes result value [size #f])
-    (if (if size (<= size 1)
-                 (<= value #xFF))
-        (cons value result)
-        (split-into-bytes (cons (bitwise-and value #xFF) result)
-                          (arithmetic-shift value -8)
-                          (and size (- size 1)))))
-
-(define (format-7bit-signed value)
-  (if (or (> value 127) (< value -128))
-      (error 'relative-value "outside of range (-128, 127): ~a" value)
-      (if (>= value 0) value (+ 256 value))))
-
-(define (get-value-size mnemonic mode)
-  (cond
-    [(pseudo-op? mnemonic)
-     (if (eq? mnemonic 'dw) 2 1)]
-    [(eq? mode 'inh) 0]
-    [(eq? mode 'dir) 1]
-    [(eq? mode 'idx) 1]
-    [(eq? mode 'rel) 1]
-    [(eq? mode 'ext) 2]
-    [(and (eq? mode 'imm)
-          (16bit-opcode? mnemonic)) 2]
-    [(eq? mode 'imm) 1]))
+      (split-into-bytes '() value (if (pseudo-op? mnemonic)
+                                      (if (eq? mnemonic 'dw) 2 1)
+                                      (get-value-size mnemonic mode)))))
 
 (define (resolve-relative-branches pos&bytes)
   (for/list ([pos&byte pos&bytes])
@@ -195,7 +161,7 @@
     (cons pos
           (map (match-lambda
                  [(cons 'relative value)
-                  (format-7bit-signed
+                  (number->7bit-signed
                      (- (resolve-value value) (+ pos 2)))]
                  [byte byte])
                bytes))))
