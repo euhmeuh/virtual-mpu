@@ -1,8 +1,7 @@
 #lang racket/base
 
 (provide
-  ril011w-memory-read
-  ril011w-memory-write!)
+  ril011w-address-decode)
 
 (require
   "utils.rkt")
@@ -18,19 +17,7 @@
 (define acia (make-bytes 2))
 (define ram (make-bytes (* 56 1024)))
 
-(define (ril011w-memory-read addr [size 1])
-  (define device (get-device addr))
-  (define offset (- size 1))
-  (cond
-    [(< (+ addr offset)
-        (bytes-length device))
-     (subbytes device addr (+ addr size))]
-    [else (bytes-ref device addr)]))
-
-(define (ril011w-memory-write! addr bytes)
-  (bytes-copy! (get-device addr) addr bytes))
-
-(define (get-device addr)
+(define (ril011w-address-decode addr)
   (cond
     [(<= addr #x0FFF) rom]
     [(<= addr #x1FFF) acia]

@@ -30,5 +30,5 @@
               (to-hex ,assemble-to-hex)
               (to-s-record ,assemble-to-s-record)]
     [emulate  ,(lambda (kernel)
-                 (emulate kernel ril011w-memory-read ril011w-memory-write!))])
+                 (emulate kernel ril011w-address-decode))])
   (current-command-line-arguments))

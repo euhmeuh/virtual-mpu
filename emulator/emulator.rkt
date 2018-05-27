@@ -19,19 +19,17 @@
 (define nmi-addr #xFFFC)
 (define restart-addr #xFFFE)
 
-(define current-mem-reader (make-parameter #f))
-(define current-mem-writer (make-parameter #f))
+(define current-address-decoder (make-parameter #f))
 
-(define (emulate kernel-filepath mem-reader mem-writer)
-  (current-mem-reader mem-reader)
-  (current-mem-writer mem-writer)
+(define (emulate kernel-filepath addr-decoder)
+  (current-address-decoder addr-decoder)
   (call-with-input-file kernel-filepath init-memory)
   (emulation-loop))
 
 (define (init-memory in)
   (for ([byte (in-port read-byte in)]
         [i (in-naturals)])
-    ((current-mem-writer) i (bytes byte))))
+    (memory-write! i (bytes byte))))
 
 (define (emulation-loop)
   (let loop ([result #f])
@@ -42,7 +40,7 @@
 
 (define (fetch)
   ;; we read 3 bytes in advance in case we need operands
-  (define bytes ((current-mem-reader) pc 3))
+  (define bytes (memory-read pc 3))
   (define-values (mnemonic mode)
                  (get-mnemonic (bytes-ref bytes 0)))
   (advance-pc! mnemonic mode)
@@ -56,3 +54,19 @@
     (format "~a (~a) - ~a"
             mnemonic mode (map format-hex
                                (bytes->list next-bytes)))))
+
+(define (memory-read addr [size 1])
+  (define device ((current-address-decoder) addr))
+  (define len (bytes-length device))
+  (let loop ([result (make-bytes 0)]
+             [size size])
+    (if (> size 0)
+        (loop (if (>= (+ addr size) len)
+                  result
+                  (bytes-append (bytes (bytes-ref device (+ size addr)))
+                                result))
+              (- size 1))
+        result)))
+
+(define (memory-write! addr bytes)
+  (bytes-copy! ((current-address-decoder) addr) addr bytes))
