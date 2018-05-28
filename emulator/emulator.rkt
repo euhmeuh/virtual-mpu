@@ -61,9 +61,9 @@
   (let loop ([result (make-bytes 0)]
              [size size])
     (if (> size 0)
-        (loop (if (>= (+ addr size) len)
+        (loop (if (> (+ addr size) len)
                   result
-                  (bytes-append (bytes (bytes-ref device (+ size addr)))
+                  (bytes-append (bytes (bytes-ref device (+ size addr -1)))
                                 result))
               (- size 1))
         result)))
