@@ -5,7 +5,8 @@
   format-hex
   chunk
   split-into-bytes
-  number->7bit-signed)
+  number->7bit-signed
+  7bit-signed->number)
 
 (require
   racket/list)
@@ -42,3 +43,6 @@
   (if (or (> value 127) (< value -128))
       (error 'relative-value "outside of range (-128, 127): ~a" value)
       (if (>= value 0) value (+ 256 value))))
+
+(define (7bit-signed->number value)
+  (bitwise-and #xFF (- value 1)))

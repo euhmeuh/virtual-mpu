@@ -50,10 +50,27 @@
   (set! pc (+ 1 pc (get-value-size mnemonic mode))))
 
 (define (execute mnemonic mode next-bytes)
-  (displayln
-    (format "~a (~a) - ~a"
-            mnemonic mode (map format-hex
-                               (bytes->list next-bytes)))))
+  (define operand (parse-operand mnemonic mode next-bytes))
+  (display (format "~a (~a)" mnemonic mode))
+  (when operand
+    (display (format " - ~a" (format-hex operand))))
+  (newline))
+
+(define (parse-operand mnemonic mode bytes)
+  (define value-size (get-value-size mnemonic mode))
+  (define first-byte (and (> (bytes-length bytes) 0)
+                          (bytes-ref bytes 0)))
+  (define second-byte (and (> (bytes-length bytes) 1)
+                           (bytes-ref bytes 1)))
+  (cond
+    [(= value-size 2)
+     (+ (arithmetic-shift first-byte 8)
+        second-byte)]
+    [(and (= value-size 1)
+          (eq? mode 'rel))
+     (7bit-signed->number first-byte)]
+    [(= value-size 1) first-byte]
+    [else #f]))
 
 (define (memory-read addr [size 1])
   (define device ((current-address-decoder) addr))
