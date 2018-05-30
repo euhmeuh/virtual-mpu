@@ -1,6 +1,8 @@
 #lang racket/base
 
-(require charterm)
+(require
+  charterm
+  "gui.rkt")
 
 #| Mockup 1: Main view
 ┌──────────────────╥─Main program──────────────────────────────────────────────┐
@@ -71,83 +73,19 @@
 └──────────────────╨───────────────────────────────────────────────────────────┘
 |#
 
-(define (box-mode/c value) (memq value '(fit balanced)))
-(define (input-mode/c value) (memq value '(str dec hex bin)))
-(define (buffer-mode/c value) (memq value '(full stack)))
-(define (separator/c value) (memq value '(line double dash space)))
-
-(struct element (name show?))
-(struct container element (size padding elements))
-(struct box container (orientation mode separator))
-
-(struct screen container () #:name _screen #:constructor-name make-screen)
-(struct grid container (dimensions) #:name _grid #:constructor-name make-grid)
-(struct label element (text) #:name _label #:constructor-name make-label)
-(struct input element (label mode length) #:name _input #:constructor-name make-input)
-(struct buffer element (title mode) #:name _buffer #:constructor-name make-buffer)
-
-(define (screen #:name [name #f]
-                #:show? [show? #t]
-                #:size [size 'auto]
-                #:padding [padding '(0 0 0 0)]
-                . elements)
-  (make-screen name show? size padding elements))
-
-(define (hbox #:name [name #f]
-              #:show? [show? #t]
-              #:size [size 'auto]
-              #:padding [padding '(0 0 0 0)]
-              #:mode [mode 'fit]
-              #:separator [separator 'line]
-              . elements)
-  (box name show? size padding elements 'horizontal mode separator))
-
-(define (vbox #:name [name #f]
-              #:show? [show? #t]
-              #:size [size 'auto]
-              #:padding [padding '(0 0 0 0)]
-              #:mode [mode 'fit]
-              #:separator [separator 'line]
-              . elements)
-  (box name show? size padding elements 'vertical mode separator))
-
-(define (grid #:name [name #f]
-              #:show? [show? #t]
-              #:size [size 'auto]
-              #:padding [padding '(0 0 0 0)]
-              #:dimensions [dimensions '(2 2)]
-              elements-hash)
-  (make-grid name show? size padding elements-hash dimensions))
-
-(define (label #:name [name #f] #:show? [show? #t] text)
-  (make-label name show? text))
-
-(define (input #:name [name #f]
-               #:show? [show? #t]
-               #:label [label #f]
-               #:mode [mode 'str]
-               #:length [length 8])
-  (make-input name show? label mode length))
-
-(define (buffer #:name [name #f]
-                #:show? [show? #t]
-                #:title [title #f]
-                #:mode [mode 'full])
-  (make-buffer name show? title mode))
-
 (define (start ui)
   (unless (screen? ui)
     ;; default screen
     (set! ui (screen #:size 'auto ui)))
   (with-charterm
+   (define-values (width height) (charterm-screen-size))
    (charterm-clear-screen)
-   (charterm-cursor 0 0)
-   (charterm-display "Hello, you.")
-   (charterm-display "Press a key...")
+   (charterm-cursor 1 1)
    (let loop ([key (charterm-read-key)])
-     (charterm-cursor 1 1)
+     (charterm-cursor 2 2)
      (charterm-clear-line)
      (printf "You pressed: ~S\r\n" key)
+     (display (list 1 1 width height) ui)
      (unless (eq? key 'ctrl-d)
        (loop (charterm-read-key))))))
 
