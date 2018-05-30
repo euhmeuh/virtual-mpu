@@ -87,7 +87,9 @@
      (printf "You pressed: ~S\r\n" key)
      (display (list 1 1 width height) ui)
      (unless (eq? key 'ctrl-d)
-       (loop (charterm-read-key))))))
+       (loop (charterm-read-key)))))
+  (newline)
+  (displayln "Goodbye!"))
 
 (define ui
   (screen #:size '(80 20)
