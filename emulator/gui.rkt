@@ -27,6 +27,7 @@
   racket/match
   charterm)
 
+(define (box-orientation/c value) (memq value '(horizontal vertical)))
 (define (box-mode/c value) (memq value '(fit balanced)))
 (define (input-mode/c value) (memq value '(str dec hex bin)))
 (define (buffer-mode/c value) (memq value '(full stack)))
@@ -39,7 +40,24 @@
 
 (struct element (name show?) #:methods gen:displayable [])
 (struct container element (size padding elements))
-(struct box container (orientation mode separator))
+
+(struct box container (orientation mode separator)
+  #:methods gen:displayable
+  [(define/generic base-display display)
+   (define (display area displayable)
+     (set! area (get-display-area area displayable))
+     (define orientation (box-orientation displayable))
+     (define children (container-elements displayable))
+     (define-values
+       (first-area second-area)
+       (split-area orientation area))
+     (if (eq? orientation 'horizontal)
+         (display-line (list (area-w first-area) (area-y first-area))
+                       (list (area-w first-area) (area-h first-area)) "|"  #:head "+" #:tail "+")
+         (display-line (list (area-x first-area) (area-h first-area))
+                       (list (area-w first-area) (area-h first-area)) "-"  #:head "+" #:tail "+"))
+     (base-display first-area (first children))
+     (base-display second-area (second children)))])
 
 (define (hbox #:name [name #f]
               #:show? [show? #t]
@@ -126,21 +144,40 @@
 (define (display-borders area)
   (define-values
     (base-x base-y end-x end-y)
-    (values (area-x area) (area-y area)
-            (area-w area) (area-h area)))
+    (apply values area))
+  (display-line (list base-x base-y) (list end-x base-y) "-" #:head "+" #:tail "+")
+  (display-line (list base-x base-y) (list base-x end-y) "|" #:head "+" #:tail "+")
+  (display-line (list base-x end-y)  (list end-x end-y)  "-" #:head "+" #:tail "+")
+  (display-line (list end-x base-y)  (list end-x end-y)  "|" #:head "+" #:tail "+"))
+
+(define (display-line start-pos end-pos char
+                      #:head [head-char #f]
+                      #:tail [tail-char #f])
+  (define-values
+    (base-x base-y end-x end-y)
+    (apply values (append start-pos end-pos)))
   (for ([x (in-range base-x (add1 end-x))])
     (for ([y (in-range base-y (add1 end-y))])
       (charterm-cursor x y)
       (match (list x y)
-        [(list (== base-x) (== base-y)) (charterm-display "+")]
-        [(list (== end-x)  (== base-y)) (charterm-display "+")]
-        [(list (== base-x) (== end-y)) (charterm-display "+")]
-        [(list (== end-x)  (== end-y)) (charterm-display "+")]
-        [(list (== base-x) _) (charterm-display "|")]
-        [(list _ (== base-y)) (charterm-display "-")]
-        [(list (== end-x) _) (charterm-display "|")]
-        [(list _ (== end-y)) (charterm-display "-")]
-        [_ #f]))))
+        [(list (== base-x) (== base-y)) (charterm-display (or head-char char))]
+        [(list (== end-x) (== end-y)) (charterm-display (or tail-char char))]
+        [_ (charterm-display char)]))))
+
+(define (split-area orientation area)
+  (define first-area
+    (match area
+      [(list x y w h) #:when (eq? orientation 'horizontal)
+       (list x y (/ w 2) h)]
+      [(list x y w h) #:when (eq? orientation 'vertical)
+       (list x y w (/ h 2))]))
+  (define second-area
+    (match area
+      [(list x y w h) #:when (eq? orientation 'horizontal)
+       (list (+ 1 (/ w 2)) y w h)]
+      [(list x y w h) #:when (eq? orientation 'vertical)
+       (list x (+ 1 (/ h 2)) w h)]))
+  (values first-area second-area))
 
 (define (area-x lst) (first lst))
 (define (area-y lst) (second lst))
