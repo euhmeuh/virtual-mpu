@@ -1,6 +1,11 @@
 #lang racket/base
 
 (provide
+  (struct-out area)
+  area-top-left
+  area-top-right
+  area-top-left
+  area-bottom-right
   (struct-out element)
   (struct-out container)
   (struct-out box)
@@ -48,16 +53,14 @@
      (set! area (get-display-area area displayable))
      (define orientation (box-orientation displayable))
      (define children (container-elements displayable))
-     (define-values
-       (first-area second-area)
-       (split-area orientation area))
-     (if (eq? orientation 'horizontal)
-         (display-line (list (area-w first-area) (area-y first-area))
-                       (list (area-w first-area) (area-h first-area)) "|"  #:head "+" #:tail "+")
-         (display-line (list (area-x first-area) (area-h first-area))
-                       (list (area-w first-area) (area-h first-area)) "-"  #:head "+" #:tail "+"))
-     (base-display first-area (first children))
-     (base-display second-area (second children)))])
+     (unless (= (length children) 0)
+       (define children-areas (split-area orientation area (length children)))
+       (for ([child children]
+             [child-area children-areas])
+         (if (eq? orientation 'horizontal)
+             (display-line (area-top-right child-area) (area-bottom-right child-area) "|"  #:head "+" #:tail "+")
+             (display-line (area-bottom-left child-area) (area-bottom-right child-area) "-"  #:head "+" #:tail "+"))
+         (base-display child-area child))))])
 
 (define (hbox #:name [name #f]
               #:show? [show? #t]
@@ -130,25 +133,19 @@
                 #:mode [mode 'full])
   (make-buffer name show? title mode))
 
-(define (get-display-area area container)
+(define (get-display-area an-area container)
   (define size (container-size container))
   (if (eq? 'auto size)
-      area
-      (list (area-x area)
-            (area-y area)
-            (min (area-w area)
-                 (first size))
-            (min (area-h area)
-                 (second size)))))
+      an-area
+      (struct-copy area an-area
+        [w (min (area-w an-area) (first size))]
+        [h (min (area-h an-area) (second size))])))
 
-(define (display-borders area)
-  (define-values
-    (base-x base-y end-x end-y)
-    (apply values area))
-  (display-line (list base-x base-y) (list end-x base-y) "-" #:head "+" #:tail "+")
-  (display-line (list base-x base-y) (list base-x end-y) "|" #:head "+" #:tail "+")
-  (display-line (list base-x end-y)  (list end-x end-y)  "-" #:head "+" #:tail "+")
-  (display-line (list end-x base-y)  (list end-x end-y)  "|" #:head "+" #:tail "+"))
+(define (display-borders an-area)
+  (display-line (area-top-left an-area)    (area-top-right an-area)    "-" #:head "+" #:tail "+")
+  (display-line (area-top-left an-area)    (area-bottom-left an-area)  "|" #:head "+" #:tail "+")
+  (display-line (area-bottom-left an-area) (area-bottom-right an-area) "-" #:head "+" #:tail "+")
+  (display-line (area-top-right an-area)   (area-bottom-right an-area) "|" #:head "+" #:tail "+"))
 
 (define (display-line start-pos end-pos char
                       #:head [head-char #f]
@@ -158,28 +155,43 @@
     (apply values (append start-pos end-pos)))
   (for ([x (in-range base-x (add1 end-x))])
     (for ([y (in-range base-y (add1 end-y))])
-      (charterm-cursor x y)
+      (charterm-cursor (+ 1 x) (+ 1 y))
       (match (list x y)
-        [(list (== base-x) (== base-y)) (charterm-display (or head-char char))]
-        [(list (== end-x) (== end-y)) (charterm-display (or tail-char char))]
+        [(== start-pos) (charterm-display (or head-char char))]
+        [(== end-pos) (charterm-display (or tail-char char))]
         [_ (charterm-display char)]))))
 
-(define (split-area orientation area)
-  (define first-area
-    (match area
-      [(list x y w h) #:when (eq? orientation 'horizontal)
-       (list x y (/ w 2) h)]
-      [(list x y w h) #:when (eq? orientation 'vertical)
-       (list x y w (/ h 2))]))
-  (define second-area
-    (match area
-      [(list x y w h) #:when (eq? orientation 'horizontal)
-       (list (+ 1 (/ w 2)) y w h)]
-      [(list x y w h) #:when (eq? orientation 'vertical)
-       (list x (+ 1 (/ h 2)) w h)]))
-  (values first-area second-area))
+(define (split-area orientation an-area n)
+  (define new-w (quotient (area-w an-area) n))
+  (define new-h (quotient (area-h an-area) n))
+  (for/list ([i n])
+    (match an-area
+      [(area x y w h) #:when (eq? orientation 'horizontal)
+       (area (+ x (* i new-w)) y new-w h)]
+      [(area x y w h) #:when (eq? orientation 'vertical)
+       (area x (+ y (* i new-h)) w new-h)])))
 
-(define (area-x lst) (first lst))
-(define (area-y lst) (second lst))
-(define (area-w lst) (third lst))
-(define (area-h lst) (fourth lst))
+(struct area (x y w h) #:transparent)
+
+(define (area-top-left an-area)
+  (list (area-x an-area) (area-y an-area)))
+
+(define (area-top-right an-area)
+  (list (+ (area-x an-area)
+           (area-w an-area)
+           -1)
+        (area-y an-area)))
+
+(define (area-bottom-left an-area)
+  (list (area-x an-area)
+        (+ (area-y an-area)
+           (area-h an-area)
+           -1)))
+
+(define (area-bottom-right an-area)
+  (list (+ (area-x an-area)
+           (area-w an-area)
+           -1)
+        (+ (area-y an-area)
+           (area-h an-area)
+           -1)))

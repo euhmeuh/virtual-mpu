@@ -82,7 +82,7 @@
    (charterm-clear-screen)
    (charterm-cursor 1 1)
    (let loop ([key #f])
-     (display (list 1 1 width height) ui)
+     (display (area 0 0 width height) ui)
      (unless (eq? key 'ctrl-d)
        (loop (charterm-read-key)))))
   (newline)
