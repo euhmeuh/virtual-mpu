@@ -54,13 +54,15 @@
      (define orientation (box-orientation displayable))
      (define children (container-elements displayable))
      (unless (= (length children) 0)
-       (define children-areas (split-area orientation area (length children)))
+       (define children-areas (split-area area orientation (length children)))
        (for ([child children]
              [child-area children-areas])
          (if (eq? orientation 'horizontal)
              (display-line (area-top-right child-area) (area-bottom-right child-area) "|"  #:head "+" #:tail "+")
              (display-line (area-bottom-left child-area) (area-bottom-right child-area) "-"  #:head "+" #:tail "+"))
-         (base-display child-area child))))])
+         (if (container? child)
+             (base-display child-area child)
+             (base-display (pad-area child-area '(1 1 1 1)) child)))))])
 
 (define (hbox #:name [name #f]
               #:show? [show? #t]
@@ -125,7 +127,17 @@
                #:length [length 8])
   (make-input name show? label mode length))
 
-(struct buffer element (title mode) #:name _buffer #:constructor-name make-buffer)
+(struct buffer element (title mode)
+  #:name _buffer
+  #:constructor-name make-buffer
+  #:methods gen:displayable
+  [(define (display area displayable)
+     (charterm-inverse)
+     (for ([y (in-range (area-y area)
+                        (+ (area-y area) (area-h area)))])
+       (display-line (list (area-x area) y)
+                     (list (+ (area-x area) (area-w area) -1) y) "b"))
+     (charterm-normal))])
 
 (define (buffer #:name [name #f]
                 #:show? [show? #t]
@@ -161,15 +173,27 @@
         [(== end-pos) (charterm-display (or tail-char char))]
         [_ (charterm-display char)]))))
 
-(define (split-area orientation an-area n)
-  (define new-w (quotient (area-w an-area) n))
-  (define new-h (quotient (area-h an-area) n))
+(define (split-area an-area orientation n)
+  (define-values (new-w rem-w) (quotient/remainder (area-w an-area) n))
+  (define-values (new-h rem-h) (quotient/remainder (area-h an-area) n))
   (for/list ([i n])
+    (define pad (if (= (+ i 1) n) ;; last element?
+                    (if (eq? orientation 'horizontal) rem-w rem-h) ;; take rem
+                    1)) ;; keep room for the separator
     (match an-area
       [(area x y w h) #:when (eq? orientation 'horizontal)
-       (area (+ x (* i new-w)) y new-w h)]
+       (area (+ x (* i new-w)) y (+ new-w pad) h)]
       [(area x y w h) #:when (eq? orientation 'vertical)
-       (area x (+ y (* i new-h)) w new-h)])))
+       (area x (+ y (* i new-h)) w (+ new-h pad))])))
+
+(define (pad-area an-area padding)
+  (define-values (t b l r) (apply values padding))
+  (match an-area
+    [(area x y w h)
+     (area (+ x l)
+           (+ y t)
+           (- w (+ l r))
+           (- h (+ t b)))]))
 
 (struct area (x y w h) #:transparent)
 
