@@ -103,7 +103,19 @@
   #:name _grid
   #:constructor-name make-grid
   #:methods gen:displayable
-  [(define (display area displayable) (void))])
+  [(define/generic base-display display)
+   (define (display area displayable)
+     (define dimensions (grid-dimensions displayable))
+     (define areas (for/list ([x-area (split-area area 'horizontal (first dimensions))])
+                     (split-area x-area 'vertical (second dimensions))))
+     (for ([kv (in-hash-pairs (container-elements displayable))])
+       (define-values (x y) (apply values (car kv)))
+       (define child (cdr kv))
+       (define child-area (list-ref (list-ref areas x) y))
+       (base-display (if (container? child)
+                         child-area
+                         (pad-area child-area '(1 1 1 1)))
+                     child)))])
 
 (define (grid #:name [name #f]
               #:show? [show? #t]
@@ -113,12 +125,32 @@
               elements-hash)
   (make-grid name show? size padding elements-hash dimensions))
 
-(struct label element (text) #:name _label #:constructor-name make-label)
+(struct label element (text)
+  #:name _label
+  #:constructor-name make-label
+  #:methods gen:displayable
+  [(define (display area displayable)
+     (charterm-inverse)
+     (for ([y (in-range (area-y area)
+                        (+ (area-y area) (area-h area)))])
+       (display-line (list (area-x area) y)
+                     (list (+ (area-x area) (area-w area) -1) y) "l"))
+     (charterm-normal))])
 
 (define (label #:name [name #f] #:show? [show? #t] text)
   (make-label name show? text))
 
-(struct input element (label mode length) #:name _input #:constructor-name make-input)
+(struct input element (label mode length)
+  #:name _input
+  #:constructor-name make-input
+  #:methods gen:displayable
+  [(define (display area displayable)
+     (charterm-inverse)
+     (for ([y (in-range (area-y area)
+                        (+ (area-y area) (area-h area)))])
+       (display-line (list (area-x area) y)
+                     (list (+ (area-x area) (area-w area) -1) y) "i"))
+     (charterm-normal))])
 
 (define (input #:name [name #f]
                #:show? [show? #t]

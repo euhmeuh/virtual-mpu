@@ -89,7 +89,7 @@
   (displayln "Goodbye!"))
 
 (define ui
-  (screen #:size '(80 20)
+  (screen #:size '(80 24)
     (hbox #:mode 'fit
           #:separator 'double
       (vbox #:name 'side-view
@@ -97,25 +97,27 @@
             #:padding '(0 0 1 1)
         (grid #:dimensions '(2 3)
               #:name 'registers
-          #hash([(0 0) . (input #:name 'a-input #:label "A" #:mode 'hex #:length 2)]
-                [(1 0) . (input #:name 'b-input #:label "B" #:mode 'hex #:length 2)]
-                [(0 1) . (input #:name 'ix-input #:label "IX" #:mode 'hex #:length 4)]
-                [(1 1) . (input #:name 'pc-input #:label "PC" #:mode 'hex #:length 4)]
-                [(0 2) . (input #:name 'sp-input #:label "SP" #:mode 'hex #:length 4)]))
+          (make-hash
+            `([(0 0) . ,(input #:name 'a-input #:label "A" #:mode 'hex #:length 2)]
+              [(1 0) . ,(input #:name 'b-input #:label "B" #:mode 'hex #:length 2)]
+              [(0 1) . ,(input #:name 'ix-input #:label "IX" #:mode 'hex #:length 4)]
+              [(1 1) . ,(input #:name 'pc-input #:label "PC" #:mode 'hex #:length 4)]
+              [(0 2) . ,(input #:name 'sp-input #:label "SP" #:mode 'hex #:length 4)])))
         (grid #:dimensions '(6 2)
               #:name 'status
-          #hash([(0 0) . (label "H")]
-                [(0 1) . (input #:name 'h-input #:mode 'bin #:length 1)]
-                [(1 0) . (label "I")]
-                [(1 1) . (input #:name 'i-input #:mode 'bin #:length 1)]
-                [(2 0) . (label "N")]
-                [(2 1) . (input #:name 'n-input #:mode 'bin #:length 1)]
-                [(3 0) . (label "Z")]
-                [(3 1) . (input #:name 'z-input #:mode 'bin #:length 1)]
-                [(4 0) . (label "V")]
-                [(4 1) . (input #:name 'v-input #:mode 'bin #:length 1)]
-                [(5 0) . (label "C")]
-                [(5 1) . (input #:name 'c-input #:mode 'bin #:length 1)]))
+          (make-hash
+            `([(0 0) . ,(label "H")]
+              [(0 1) . ,(input #:name 'h-input #:mode 'bin #:length 1)]
+              [(1 0) . ,(label "I")]
+              [(1 1) . ,(input #:name 'i-input #:mode 'bin #:length 1)]
+              [(2 0) . ,(label "N")]
+              [(2 1) . ,(input #:name 'n-input #:mode 'bin #:length 1)]
+              [(3 0) . ,(label "Z")]
+              [(3 1) . ,(input #:name 'z-input #:mode 'bin #:length 1)]
+              [(4 0) . ,(label "V")]
+              [(4 1) . ,(input #:name 'v-input #:mode 'bin #:length 1)]
+              [(5 0) . ,(label "C")]
+              [(5 1) . ,(input #:name 'c-input #:mode 'bin #:length 1)])))
         (vbox #:name 'machine)
         (vbox #:name 'commands))
       (vbox #:name 'main-view
