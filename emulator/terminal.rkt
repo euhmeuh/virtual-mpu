@@ -2,7 +2,7 @@
 
 (require
   charterm
-  "gui.rkt")
+  "gui/base.rkt")
 
 #| Mockup 1: Main view
 ┌──────────────────╥─Main program──────────────────────────────────────────────┐
