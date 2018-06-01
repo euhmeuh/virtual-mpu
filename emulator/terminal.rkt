@@ -90,10 +90,11 @@
 
 (define ui
   (screen #:size '(80 24)
-    (hbox #:mode 'fit
+    (hbox #:mode 'balanced
           #:separator 'double
       (vbox #:name 'side-view
             #:separator 'dash
+            #:size '(20 auto)
             #:padding '(0 0 1 1)
         (grid #:dimensions '(2 3)
               #:name 'registers
