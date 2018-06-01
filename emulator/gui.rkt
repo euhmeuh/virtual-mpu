@@ -212,17 +212,19 @@
     [(eq? b 'auto) a]
     [else (max a b)]))
 
+(define (min-size a b)
+  (cond
+    [(eq? a 'auto) b]
+    [(eq? b 'auto) a]
+    [else (min a b)]))
+
 (define (get-display-area an-area container)
   (define size (container-size container))
   (if (eq? 'auto size)
       an-area
-      (let ([size-w (first size)]
-            [size-h (second size)]
-            [w (area-w an-area)]
-            [h (area-h an-area)])
-        (struct-copy area an-area
-          [w (if (eq? size-w 'auto) w (min w size-w))]
-          [h (if (eq? size-h 'auto) h (min h size-h))]))))
+      (struct-copy area an-area
+        [w (min-size (area-w an-area) (first size))]
+        [h (min-size (area-h an-area) (second size))])))
 
 (define (display-borders an-area)
   (display-line (area-top-left an-area)    (area-top-right an-area)    "-" #:head "+" #:tail "+")
