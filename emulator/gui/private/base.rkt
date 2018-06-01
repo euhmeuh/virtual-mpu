@@ -155,19 +155,24 @@
                                 (values (area-w base-area) area-w)
                                 (values (area-h base-area) area-h)))
   (define total (foldl (lambda (a b) (+ (get a) b)) 0 areas))
-  (define overflow (- total base))
+  (define separators (- (length areas) 1)) ;; don't count overlapping separators
+  (define overflow (- total separators base))
   (define reduction (if (and (> overflow 0) (pair? to-be-reduced))
                         (quotient overflow (length to-be-reduced))
                         0))
+  (define total-reduction 0)
   (for/list ([an-area areas]
              [i (in-naturals)])
-    (if (member i to-be-reduced)
-        (match an-area
-          [(area x y w h) #:when (eq? orientation 'horizontal)
-           (area x y (- w reduction) h)]
-          [(area x y w h) #:when (eq? orientation 'vertical)
-           (area x y w (- h reduction))])
-        an-area)))
+    (define the-reduc (if (member i to-be-reduced) reduction 0))
+    (define new-area
+      (match an-area
+        [(area x y w h) #:when (eq? orientation 'horizontal)
+         (area (- x total-reduction) y (- w the-reduc) h)]
+        [(area x y w h) #:when (eq? orientation 'vertical)
+         (area x (- y total-reduction) w (- h the-reduc))]))
+    (when (member i to-be-reduced)
+      (set! total-reduction (+ total-reduction the-reduc)))
+    new-area))
 
 (define (pad-area an-area padding)
   (define-values (t b l r) (apply values padding))
