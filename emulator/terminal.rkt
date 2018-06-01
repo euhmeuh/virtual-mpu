@@ -90,7 +90,7 @@
 
 (define ui
   (screen #:size '(80 24)
-    (hbox #:mode 'balanced
+    (hbox #:mode 'fit
           #:separator 'double
       (vbox #:name 'side-view
             #:separator 'dash

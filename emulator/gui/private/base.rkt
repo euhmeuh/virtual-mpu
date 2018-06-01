@@ -102,26 +102,72 @@
         [(== end-pos) (charterm-display (or tail-char char))]
         [_ (charterm-display char)]))))
 
-(define (split-balanced-area an-area orientation n)
-  (define-values (new-w rem-w) (quotient/remainder (area-w an-area) n))
-  (define-values (new-h rem-h) (quotient/remainder (area-h an-area) n))
+(define (split-balanced-area base-area orientation n)
+  (define-values (new-w rem-w) (quotient/remainder (area-w base-area) n))
+  (define-values (new-h rem-h) (quotient/remainder (area-h base-area) n))
   (for/list ([i n])
     (define pad (if (= (+ i 1) n) ;; last element?
                     (if (eq? orientation 'horizontal) rem-w rem-h) ;; take rem
                     1)) ;; keep room for the separator
-    (match an-area
+    (match base-area
       [(area x y w h) #:when (eq? orientation 'horizontal)
        (area (+ x (* i new-w)) y (+ new-w pad) h)]
       [(area x y w h) #:when (eq? orientation 'vertical)
        (area x (+ y (* i new-h)) w (+ new-h pad))])))
 
-(define (split-fit-area an-area orientation sizes)
-  (match-define (area x y w h) an-area)
-  (define last-pos (list x y))
-  (for/list ([size sizes])
-    (if (eq? orientation 'horizontal)
-        (area x y w h) ; TODO
-        (area x y w h))))
+(define (split-fit-area base-area orientation sizes)
+  (match-define (area base-x base-y base-w base-h) base-area)
+  (define to-be-reduced '()) ;; indexes of auto sized elements
+  ;; we start with a fake area that gives us the starting position,
+  ;; we get rid of it at the end
+  (for/fold ([areas (list (area base-x base-y 1 1))]
+             #:result (reduce-to-fit base-area
+                                     orientation
+                                     (drop (reverse areas) 1)
+                                     to-be-reduced))
+            ([size sizes]
+             [i (in-naturals)])
+    (match-define (list size-w size-h) size)
+    (cons
+      (if (eq? orientation 'horizontal)
+        (area (first (area-top-right (first areas)))
+              base-y
+              (if (eq? size-w 'auto)
+                  (begin
+                    ;; we temporarily set auto elements to the biggest available size
+                    ;; but we register them as "to be reduced later"
+                    (set! to-be-reduced (cons i to-be-reduced))
+                    base-w)
+                  size-w)
+              base-h)
+        (area base-x
+              (second (area-bottom-left (first areas)))
+              base-w
+              (if (eq? size-h 'auto)
+                  (begin
+                    (set! to-be-reduced (cons i to-be-reduced))
+                    base-h)
+                  size-h)))
+      areas)))
+
+(define (reduce-to-fit base-area orientation areas to-be-reduced)
+  (define-values (base get) (if (eq? orientation 'horizontal)
+                                (values (area-w base-area) area-w)
+                                (values (area-h base-area) area-h)))
+  (define total (foldl (lambda (a b) (+ (get a) b)) 0 areas))
+  (define overflow (- total base))
+  (define reduction (if (and (> overflow 0) (pair? to-be-reduced))
+                        (quotient overflow (length to-be-reduced))
+                        0))
+  (for/list ([an-area areas]
+             [i (in-naturals)])
+    (if (member i to-be-reduced)
+        (match an-area
+          [(area x y w h) #:when (eq? orientation 'horizontal)
+           (area x y (- w reduction) h)]
+          [(area x y w h) #:when (eq? orientation 'vertical)
+           (area x y w (- h reduction))])
+        an-area)))
 
 (define (pad-area an-area padding)
   (define-values (t b l r) (apply values padding))
