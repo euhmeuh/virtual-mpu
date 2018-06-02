@@ -175,7 +175,7 @@
     new-area))
 
 (define (pad-area an-area padding)
-  (define-values (t b l r) (apply values padding))
+  (match-define (list t b l r) padding)
   (match an-area
     [(area x y w h)
      (area (+ x l)

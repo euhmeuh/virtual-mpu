@@ -95,17 +95,20 @@
       (vbox #:name 'side-view
             #:separator 'dash
             #:size '(20 auto)
+            #:mode 'fit
             #:padding '(0 0 1 1)
-        (grid #:dimensions '(2 3)
-              #:name 'registers
+        (grid #:name 'registers
+              #:dimensions '(2 3)
+              #:size '(auto 5)
           (make-hash
             `([(0 0) . ,(input #:name 'a-input #:label "A" #:mode 'hex #:length 2)]
               [(1 0) . ,(input #:name 'b-input #:label "B" #:mode 'hex #:length 2)]
               [(0 1) . ,(input #:name 'ix-input #:label "IX" #:mode 'hex #:length 4)]
               [(1 1) . ,(input #:name 'pc-input #:label "PC" #:mode 'hex #:length 4)]
               [(0 2) . ,(input #:name 'sp-input #:label "SP" #:mode 'hex #:length 4)])))
-        (grid #:dimensions '(6 2)
-              #:name 'status
+        (grid #:name 'status
+              #:dimensions '(6 2)
+              #:size '(auto 4)
           (make-hash
             `([(0 0) . ,(label "H")]
               [(0 1) . ,(input #:name 'h-input #:mode 'bin #:length 1)]

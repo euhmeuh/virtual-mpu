@@ -15,6 +15,8 @@
   #:methods gen:displayable
   [(define/generic base-display display)
    (define (display area displayable)
+     (set! area (get-display-area area displayable))
+     (define padding (container-padding displayable))
      (define dimensions (grid-dimensions displayable))
      (define areas (for/list ([x-area (split-balanced-area area 'horizontal (first dimensions))])
                      (split-balanced-area x-area 'vertical (second dimensions))))
@@ -22,9 +24,10 @@
        (define-values (x y) (apply values (car kv)))
        (define child (cdr kv))
        (define child-area (list-ref (list-ref areas x) y))
-       (base-display (if (container? child)
-                         child-area
-                         (pad-area child-area '(1 1 1 1)))
+       (base-display (pad-area child-area
+                               (if (container? child)
+                                   padding
+                                   (map + padding '(1 1 1 1))))
                      child)))]
    #:methods gen:parent
    [(define (get-children parent)
