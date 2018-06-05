@@ -24,4 +24,4 @@
                 #:size [size 'auto]
                 #:padding [padding '(0 0 0 0)]
                 . elements)
-  (make-screen name show? size padding elements))
+  (make-screen name show? size padding 0 elements))

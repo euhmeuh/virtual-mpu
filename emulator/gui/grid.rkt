@@ -23,8 +23,11 @@
                                         (pad-area area (map + padding '(1 1 1 1)))
                                         'horizontal
                                         (first dimensions)
-                                        #:overlap 0)])
-                     (split-balanced-area x-area 'vertical (second dimensions) #:overlap 0)))
+                                        #:spacing (container-spacing displayable))])
+                     (split-balanced-area x-area
+                                          'vertical
+                                          (second dimensions)
+                                          #:spacing (container-spacing displayable))))
      (for ([(pos child) (in-hash (container-elements displayable))])
        (match-define (list x y) pos)
        (define child-area (list-ref (list-ref areas x) y))
@@ -37,6 +40,7 @@
               #:show? [show? #t]
               #:size [size 'auto]
               #:padding [padding '(0 0 0 0)]
+              #:spacing [spacing -1]
               #:dimensions [dimensions '(2 2)]
               elements-hash)
-  (make-grid name show? size padding elements-hash dimensions))
+  (make-grid name show? size padding spacing elements-hash dimensions))

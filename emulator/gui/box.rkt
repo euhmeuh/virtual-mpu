@@ -45,16 +45,18 @@
               #:show? [show? #t]
               #:size [size 'auto]
               #:padding [padding '(0 0 0 0)]
+              #:spacing [spacing -1]
               #:mode [mode 'balanced]
               #:separator [separator 'line]
               . elements)
-  (make-box name show? size padding elements 'horizontal mode separator))
+  (make-box name show? size padding spacing elements 'horizontal mode separator))
 
 (define (vbox #:name [name #f]
               #:show? [show? #t]
               #:size [size 'auto]
               #:padding [padding '(0 0 0 0)]
+              #:spacing [spacing -1]
               #:mode [mode 'balanced]
               #:separator [separator 'line]
               . elements)
-  (make-box name show? size padding elements 'vertical mode separator))
+  (make-box name show? size padding spacing elements 'vertical mode separator))

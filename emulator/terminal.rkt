@@ -100,6 +100,7 @@
               #:dimensions '(2 3)
               #:size '(auto 5)
               #:padding '(0 0 1 1)
+              #:spacing 0
           (make-hash
             `([(0 0) . ,(input #:name 'a-input #:label "A" #:mode 'hex #:length 2)]
               [(1 0) . ,(input #:name 'b-input #:label "B" #:mode 'hex #:length 2)]
@@ -109,6 +110,7 @@
         (grid #:name 'status
               #:dimensions '(6 2)
               #:size '(auto 4)
+              #:spacing 0
           (make-hash
             `([(0 0) . ,(label " H ")]
               [(0 1) . ,(input #:name 'h-input #:mode 'bin #:length 1)]

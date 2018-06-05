@@ -44,7 +44,7 @@
     (container-elements parent))])
 
 (struct element (name show?) #:methods gen:displayable [])
-(struct container element (size padding elements) #:methods gen:parent [])
+(struct container element (size padding spacing elements) #:methods gen:parent [])
 
 (define (resolve-sizes elements)
   (for/list ([element elements] #:when (container? element))
@@ -102,20 +102,20 @@
         [(== end-pos) (charterm-display (or tail-char char))]
         [_ (charterm-display char)]))))
 
-(define (split-balanced-area base-area orientation n #:overlap [overlap 1])
+(define (split-balanced-area base-area orientation n #:spacing [spacing -1])
   (define-values (new-w rem-w) (quotient/remainder (area-w base-area) n))
   (define-values (new-h rem-h) (quotient/remainder (area-h base-area) n))
   (for/list ([i n])
     (define pad (if (= (+ i 1) n) ;; last element?
                     (if (eq? orientation 'horizontal) rem-w rem-h) ;; take rem
-                    overlap))
+                    (- spacing)))
     (match base-area
       [(area x y w h) #:when (eq? orientation 'horizontal)
        (area (+ x (* i new-w)) y (+ new-w pad) h)]
       [(area x y w h) #:when (eq? orientation 'vertical)
        (area x (+ y (* i new-h)) w (+ new-h pad))])))
 
-(define (split-fit-area base-area orientation sizes #:overlap [overlap 1])
+(define (split-fit-area base-area orientation sizes #:spacing [spacing -1])
   (match-define (area base-x base-y base-w base-h) base-area)
   (define to-be-reduced '()) ;; indexes of auto sized elements
   ;; we start with a fake area that gives us the starting position,
@@ -128,14 +128,15 @@
                  orientation
                  areas
                  to-be-reduced
-                 (* (- (length areas) 1) overlap))))
+                 (if (< spacing 0)
+                     (* (- (length areas) 1) (abs spacing))
+                     0))))
             ([size sizes]
              [i (in-naturals)])
     (match-define (list size-w size-h) size)
     (cons
       (if (eq? orientation 'horizontal)
-        (area (- (first (area-top-right (first areas)))
-                 (- overlap 1))
+        (area (+ (first (area-top-right (first areas))) 1 spacing)
               base-y
               (if (eq? size-w 'auto)
                   (begin
@@ -146,8 +147,7 @@
                   size-w)
               base-h)
         (area base-x
-              (- (second (area-bottom-left (first areas)))
-                 (- overlap 1))
+              (+ (second (area-bottom-left (first areas))) 1 spacing)
               base-w
               (if (eq? size-h 'auto)
                   (begin
