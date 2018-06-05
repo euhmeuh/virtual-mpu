@@ -20,7 +20,9 @@
      (for ([y (in-range (area-y area)
                         (+ (area-y area) (area-h area)))])
        (display-line (list (area-x area) y)
-                     (list (+ (area-x area) (area-w area) -1) y) "i"))
+                     (list (+ (area-x area) (area-w area) -1) y) " "))
+     (apply charterm-cursor (map add1 (area-top-left area)))
+     (charterm-display (or (input-label displayable) " "))
      (charterm-normal))])
 
 (define (input #:name [name #f]

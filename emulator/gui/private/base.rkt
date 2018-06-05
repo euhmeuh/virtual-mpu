@@ -102,35 +102,40 @@
         [(== end-pos) (charterm-display (or tail-char char))]
         [_ (charterm-display char)]))))
 
-(define (split-balanced-area base-area orientation n)
+(define (split-balanced-area base-area orientation n #:overlap [overlap 1])
   (define-values (new-w rem-w) (quotient/remainder (area-w base-area) n))
   (define-values (new-h rem-h) (quotient/remainder (area-h base-area) n))
   (for/list ([i n])
     (define pad (if (= (+ i 1) n) ;; last element?
                     (if (eq? orientation 'horizontal) rem-w rem-h) ;; take rem
-                    1)) ;; keep room for the separator
+                    overlap))
     (match base-area
       [(area x y w h) #:when (eq? orientation 'horizontal)
        (area (+ x (* i new-w)) y (+ new-w pad) h)]
       [(area x y w h) #:when (eq? orientation 'vertical)
        (area x (+ y (* i new-h)) w (+ new-h pad))])))
 
-(define (split-fit-area base-area orientation sizes)
+(define (split-fit-area base-area orientation sizes #:overlap [overlap 1])
   (match-define (area base-x base-y base-w base-h) base-area)
   (define to-be-reduced '()) ;; indexes of auto sized elements
   ;; we start with a fake area that gives us the starting position,
   ;; we get rid of it at the end
   (for/fold ([areas (list (area base-x base-y 1 1))]
-             #:result (reduce-to-fit base-area
-                                     orientation
-                                     (drop (reverse areas) 1)
-                                     to-be-reduced))
+             #:result
+             (let ([areas (drop (reverse areas) 1)])
+               (reduce-to-fit
+                 base-area
+                 orientation
+                 areas
+                 to-be-reduced
+                 (* (- (length areas) 1) overlap))))
             ([size sizes]
              [i (in-naturals)])
     (match-define (list size-w size-h) size)
     (cons
       (if (eq? orientation 'horizontal)
-        (area (first (area-top-right (first areas)))
+        (area (- (first (area-top-right (first areas)))
+                 (- overlap 1))
               base-y
               (if (eq? size-w 'auto)
                   (begin
@@ -141,7 +146,8 @@
                   size-w)
               base-h)
         (area base-x
-              (second (area-bottom-left (first areas)))
+              (- (second (area-bottom-left (first areas)))
+                 (- overlap 1))
               base-w
               (if (eq? size-h 'auto)
                   (begin
@@ -150,13 +156,12 @@
                   size-h)))
       areas)))
 
-(define (reduce-to-fit base-area orientation areas to-be-reduced)
+(define (reduce-to-fit base-area orientation areas to-be-reduced total-overlap)
   (define-values (base get) (if (eq? orientation 'horizontal)
                                 (values (area-w base-area) area-w)
                                 (values (area-h base-area) area-h)))
   (define total (foldl (lambda (a b) (+ (get a) b)) 0 areas))
-  (define separators (- (length areas) 1)) ;; don't count overlapping separators
-  (define overflow (- total separators base))
+  (define overflow (- total base total-overlap))
   (define reduction (if (and (> overflow 0) (pair? to-be-reduced))
                         (quotient overflow (length to-be-reduced))
                         0))

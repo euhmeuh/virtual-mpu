@@ -5,6 +5,7 @@
   grid)
 
 (require
+  racket/match
   racket/generic
   racket/list
   "private/base.rkt")
@@ -18,17 +19,16 @@
      (set! area (get-display-area area displayable))
      (define padding (container-padding displayable))
      (define dimensions (grid-dimensions displayable))
-     (define areas (for/list ([x-area (split-balanced-area area 'horizontal (first dimensions))])
-                     (split-balanced-area x-area 'vertical (second dimensions))))
-     (for ([kv (in-hash-pairs (container-elements displayable))])
-       (define-values (x y) (apply values (car kv)))
-       (define child (cdr kv))
+     (define areas (for/list ([x-area (split-balanced-area
+                                        (pad-area area (map + padding '(1 1 1 1)))
+                                        'horizontal
+                                        (first dimensions)
+                                        #:overlap 0)])
+                     (split-balanced-area x-area 'vertical (second dimensions) #:overlap 0)))
+     (for ([(pos child) (in-hash (container-elements displayable))])
+       (match-define (list x y) pos)
        (define child-area (list-ref (list-ref areas x) y))
-       (base-display (pad-area child-area
-                               (if (container? child)
-                                   padding
-                                   (map + padding '(1 1 1 1))))
-                     child)))]
+       (base-display child-area child)))]
    #:methods gen:parent
    [(define (get-children parent)
       (hash-values (container-elements parent)))])

@@ -96,10 +96,10 @@
             #:separator 'dash
             #:size '(20 auto)
             #:mode 'fit
-            #:padding '(0 0 1 1)
         (grid #:name 'registers
               #:dimensions '(2 3)
               #:size '(auto 5)
+              #:padding '(0 0 1 1)
           (make-hash
             `([(0 0) . ,(input #:name 'a-input #:label "A" #:mode 'hex #:length 2)]
               [(1 0) . ,(input #:name 'b-input #:label "B" #:mode 'hex #:length 2)]
@@ -110,17 +110,17 @@
               #:dimensions '(6 2)
               #:size '(auto 4)
           (make-hash
-            `([(0 0) . ,(label "H")]
+            `([(0 0) . ,(label " H ")]
               [(0 1) . ,(input #:name 'h-input #:mode 'bin #:length 1)]
-              [(1 0) . ,(label "I")]
+              [(1 0) . ,(label " I ")]
               [(1 1) . ,(input #:name 'i-input #:mode 'bin #:length 1)]
-              [(2 0) . ,(label "N")]
+              [(2 0) . ,(label " N ")]
               [(2 1) . ,(input #:name 'n-input #:mode 'bin #:length 1)]
-              [(3 0) . ,(label "Z")]
+              [(3 0) . ,(label " Z ")]
               [(3 1) . ,(input #:name 'z-input #:mode 'bin #:length 1)]
-              [(4 0) . ,(label "V")]
+              [(4 0) . ,(label " V ")]
               [(4 1) . ,(input #:name 'v-input #:mode 'bin #:length 1)]
-              [(5 0) . ,(label "C")]
+              [(5 0) . ,(label " C ")]
               [(5 1) . ,(input #:name 'c-input #:mode 'bin #:length 1)])))
         (vbox #:name 'machine)
         (vbox #:name 'commands))
