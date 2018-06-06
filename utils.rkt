@@ -2,7 +2,9 @@
 
 (provide
   symbol-append
+  format-dec
   format-hex
+  format-bin
   chunk
   split-into-bytes
   number->7bit-signed
@@ -16,9 +18,18 @@
     (string-append (symbol->string sym-a)
                    (symbol->string sym-b))))
 
+(define (format-dec value #:min-width [min-width 1])
+  (format-num value 10 min-width))
+
 (define (format-hex value #:min-width [min-width 2])
+  (format-num value '(up 16) min-width))
+
+(define (format-bin value #:min-width [min-width 8])
+  (format-num value 2 min-width))
+
+(define (format-num value base min-width)
   (local-require (only-in racket/format ~r))
-  (~r #:base '(up 16)
+  (~r #:base base
       #:min-width min-width
       #:pad-string "0"
       value))

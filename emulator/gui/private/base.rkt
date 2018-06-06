@@ -14,6 +14,7 @@
   display
   gen:parent
   parent?
+  find-element
   get-children
   get-display-area
   pad-area
@@ -45,6 +46,18 @@
 
 (struct element (name show?) #:methods gen:displayable [])
 (struct container element (size padding spacing elements) #:methods gen:parent [])
+
+(define (find-element container name)
+  (let loop [(elements (cons container (get-children container)))]
+    (if (pair? elements)
+        (let ([elt (car elements)])
+          (if (eq? (element-name elt) name)
+              elt
+              (loop (append (if (container? elt)
+                                (get-children elt)
+                                '())
+                            (cdr elements)))))
+        #f)))
 
 (define (resolve-sizes elements)
   (for/list ([element elements] #:when (container? element))

@@ -5,29 +5,43 @@
   input)
 
 (require
+  racket/list
+  racket/match
   racket/contract/base
   charterm
-  "private/base.rkt")
+  "private/base.rkt"
+  "../../utils.rkt")
 
 (define input-mode/c (symbols 'str 'dec 'hex 'bin))
 
-(struct input element (label mode length)
+(struct input element (label mode length [value #:mutable])
   #:name _input
   #:constructor-name make-input
   #:methods gen:displayable
   [(define (display area displayable)
-     (charterm-inverse)
-     (for ([y (in-range (area-y area)
-                        (+ (area-y area) (area-h area)))])
-       (display-line (list (area-x area) y)
-                     (list (+ (area-x area) (area-w area) -1) y) " "))
      (apply charterm-cursor (map add1 (area-top-left area)))
-     (charterm-display (or (input-label displayable) " "))
-     (charterm-normal))])
+     (charterm-display (or (input-label displayable) ""))
+     (when (input-value displayable)
+       (define len (input-length displayable))
+       (charterm-inverse)
+       (apply charterm-cursor (match (area-top-right area)
+                                [(list x y) (list (+ 1 (- x len)) (+ 1 y))]))
+       (charterm-display (format-input-value (input-mode displayable)
+                                             (input-value displayable)
+                                             len))
+       (charterm-normal)))])
 
 (define (input #:name [name #f]
                #:show? [show? #t]
                #:label [label #f]
                #:mode [mode 'str]
                #:length [length 8])
-  (make-input name show? label mode length))
+  (make-input name show? label mode length #f))
+
+(define (format-input-value mode value len)
+  (cond
+    [(eq? mode 'str) (substring value 0 len)]
+    [(eq? mode 'dec) (format-dec value #:min-width len)]
+    [(eq? mode 'hex) (format-hex value #:min-width len)]
+    [(eq? mode 'bin) (format-bin value #:min-width len)]
+    [else ""]))

@@ -4,6 +4,7 @@
   (struct-out area)
   display
   displayable?
+  find-element
   (struct-out _screen)
   screen
   (struct-out _box)

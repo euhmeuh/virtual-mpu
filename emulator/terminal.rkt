@@ -137,4 +137,16 @@
         (buffer #:name 'memory-buffer
                 #:title "Stack")))))
 
+(set-input-value! (find-element ui 'a-input) 12)
+(set-input-value! (find-element ui 'b-input) 42)
+(set-input-value! (find-element ui 'ix-input) 1234)
+(set-input-value! (find-element ui 'pc-input) #x8080)
+(set-input-value! (find-element ui 'sp-input) #xABCD)
+(set-input-value! (find-element ui 'h-input) 0)
+(set-input-value! (find-element ui 'i-input) 1)
+(set-input-value! (find-element ui 'n-input) 0)
+(set-input-value! (find-element ui 'z-input) 1)
+(set-input-value! (find-element ui 'v-input) 0)
+(set-input-value! (find-element ui 'c-input) 1)
+
 (start ui)
