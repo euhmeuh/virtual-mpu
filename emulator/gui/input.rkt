@@ -23,7 +23,7 @@
      (charterm-display (or (input-label displayable) ""))
      (when (input-value displayable)
        (define len (input-length displayable))
-       (charterm-inverse)
+       (charterm-underline)
        (apply charterm-cursor (match (area-top-right area)
                                 [(list x y) (list (+ 1 (- x len)) (+ 1 y))]))
        (charterm-display (format-input-value (input-mode displayable)

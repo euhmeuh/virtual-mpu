@@ -14,8 +14,9 @@
   display
   gen:parent
   parent?
-  find-element
   get-children
+  add-child!
+  find-element
   get-display-area
   pad-area
   split-balanced-area
@@ -40,12 +41,18 @@
 
 (define-generics parent
   (get-children parent)
+  (add-child! parent child pos)
   #:fallbacks
   [(define (get-children parent)
-    (container-elements parent))])
+     (container-elements parent))
+   (define (add-child! parent child pos)
+     (define children (container-elements parent))
+     (set-container-elements! parent (append (take children pos)
+                                             child
+                                             (drop children pos))))])
 
 (struct element (name show?) #:methods gen:displayable [])
-(struct container element (size padding spacing elements) #:methods gen:parent [])
+(struct container element (size padding spacing [elements #:mutable]) #:methods gen:parent [])
 
 (define (find-element container name)
   (let loop [(elements (cons container (get-children container)))]

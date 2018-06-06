@@ -4,6 +4,9 @@
   (struct-out area)
   display
   displayable?
+  parent?
+  get-children
+  add-child!
   find-element
   (struct-out _screen)
   screen

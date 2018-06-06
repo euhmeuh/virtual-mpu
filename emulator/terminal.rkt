@@ -148,5 +148,10 @@
 (set-input-value! (find-element ui 'z-input) 1)
 (set-input-value! (find-element ui 'v-input) 0)
 (set-input-value! (find-element ui 'c-input) 1)
+(let ([commands (find-element ui 'commands)])
+  (add-child! commands (label "Pause      space"))
+  (add-child! commands (label "Step           s"))
+  (add-child! commands (label "Interrupt      i"))
+  (add-child! commands (label "Exit          ^D")))
 
 (start ui)
