@@ -67,26 +67,13 @@
         #f)))
 
 (define (resolve-sizes elements)
-  (for/list ([element elements] #:when (container? element))
-    (define size (container-size element))
-    (if (and (not (eq? size 'auto))
-             (not (memq 'auto size)))
-        size
-        (fold-max-size (cons size (resolve-sizes (get-children element)))))))
-
-(define (fold-max-size sizes)
-  (for/fold ([result '(auto auto)])
-            ([size sizes])
-    (when (not (eq? size 'auto))
-      (set! result (list (max-size (car result) (car size))
-                         (max-size (cadr result) (cadr size)))))
-    result))
-
-(define (max-size a b)
-  (cond
-    [(eq? a 'auto) b]
-    [(eq? b 'auto) a]
-    [else (max a b)]))
+  (for/list ([element elements])
+    (if (container? element)
+      (let ([size (container-size element)])
+        (if (eq? size 'auto)
+            '(auto auto)
+            size))
+      '(1 1))))
 
 (define (min-size a b)
   (cond

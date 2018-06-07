@@ -89,7 +89,7 @@
   (displayln "Goodbye!"))
 
 (define ui
-  (screen #:size '(80 24)
+  (screen #:size 'auto
     (hbox #:mode 'fit
           #:separator 'double
       (vbox #:name 'side-view
@@ -99,8 +99,8 @@
         (grid #:name 'registers
               #:dimensions '(2 3)
               #:size '(auto 5)
-              #:padding '(0 0 1 0)
-              #:spacing 0
+              #:padding '(0 0 1 1)
+              #:spacing 1
           (make-hash
             `([(0 0) . ,(input #:name 'a-input #:label "A" #:mode 'hex #:length 2)]
               [(1 0) . ,(input #:name 'b-input #:label "B" #:mode 'hex #:length 2)]
@@ -125,8 +125,9 @@
               [(5 0) . ,(label " C ")]
               [(5 1) . ,(input #:name 'c-input #:mode 'bin #:length 1)])))
         (vbox #:name 'machine
+              #:mode 'fit
               #:spacing 0
-              #:padding '(0 0 1 0))
+              #:padding '(0 0 1 1))
         (vbox #:name 'commands
           #:size '(auto 6)
               #:spacing 0
@@ -159,11 +160,11 @@
   (add-child! commands (label "Interrupt      i") 2)
   (add-child! commands (label "Exit          ^D") 3))
 (let ([machine (find-element ui 'machine)])
-  (add-child! machine (input #:label "Machine" #:length 9 "RIL011W") 0)
-  (add-child! machine (input #:label "MPU" #:length 9 "6802") 1)
-  (add-child! machine (input #:label "ROM" #:length 9 "0000-0FFF") 2)
-  (add-child! machine (input #:label "ACIA" #:length 9 "1000-1001") 3)
-  (add-child! machine (input #:label "RAM" #:length 9 "2000-FFFF") 4)
-  (add-child! machine (input #:label "Stack" #:length 9 "FFFF") 5))
+  (add-child! machine (input #:label "Stack" #:length 9 "FFFF"))
+  (add-child! machine (input #:label "RAM" #:length 9 "2000-FFFF"))
+  (add-child! machine (input #:label "ACIA" #:length 9 "1000-1001"))
+  (add-child! machine (input #:label "ROM" #:length 9 "0000-0FFF"))
+  (add-child! machine (input #:label "MPU" #:length 9 "6802"))
+  (add-child! machine (input #:label "Machine" #:length 9 "RIL011W")))
 
 (start ui)
