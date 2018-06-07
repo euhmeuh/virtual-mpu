@@ -126,8 +126,9 @@
               [(5 1) . ,(input #:name 'c-input #:mode 'bin #:length 1)])))
         (vbox #:name 'machine
               #:spacing 0
-              #:padding '(0 0 1 1))
+              #:padding '(0 0 1 0))
         (vbox #:name 'commands
+          #:size '(auto 6)
               #:spacing 0
               #:padding '(0 0 1 1)))
       (vbox #:name 'main-view
@@ -157,5 +158,12 @@
   (add-child! commands (label "Step           s") 1)
   (add-child! commands (label "Interrupt      i") 2)
   (add-child! commands (label "Exit          ^D") 3))
+(let ([machine (find-element ui 'machine)])
+  (add-child! machine (input #:label "Machine" #:length 9 "RIL011W") 0)
+  (add-child! machine (input #:label "MPU" #:length 9 "6802") 1)
+  (add-child! machine (input #:label "ROM" #:length 9 "0000-0FFF") 2)
+  (add-child! machine (input #:label "ACIA" #:length 9 "1000-1001") 3)
+  (add-child! machine (input #:label "RAM" #:length 9 "2000-FFFF") 4)
+  (add-child! machine (input #:label "Stack" #:length 9 "FFFF") 5))
 
 (start ui)

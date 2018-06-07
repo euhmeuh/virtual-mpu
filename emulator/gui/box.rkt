@@ -19,19 +19,21 @@
    (define (display area displayable)
      (set! area (get-display-area area displayable))
      (define padding (container-padding displayable))
+     (define spacing (container-spacing displayable))
      (define orientation (box-orientation displayable))
      (define mode (box-mode displayable))
      (define children (get-children displayable))
      (unless (= (length children) 0)
        (define children-areas
          (if (eq? mode 'balanced)
-             (split-balanced-area area orientation (length children))
-             (split-fit-area area orientation (resolve-sizes children))))
+             (split-balanced-area area orientation (length children) #:spacing spacing)
+             (split-fit-area area orientation (resolve-sizes children) #:spacing spacing)))
        (for ([child children]
              [child-area children-areas])
-         (if (eq? orientation 'horizontal)
-             (display-line (area-top-right child-area) (area-bottom-right child-area) "|"  #:head "+" #:tail "+")
-             (display-line (area-bottom-left child-area) (area-bottom-right child-area) "-"  #:head "+" #:tail "+"))
+         (unless (= spacing 0)
+           (if (eq? orientation 'horizontal)
+               (display-line (area-top-right child-area) (area-bottom-right child-area) "|"  #:head "+" #:tail "+")
+               (display-line (area-bottom-left child-area) (area-bottom-right child-area) "-"  #:head "+" #:tail "+")))
          (base-display
            (pad-area child-area
                      (if (container? child)

@@ -33,12 +33,13 @@
                     #:show? [show? #t]
                     #:label [label #f]
                     #:mode [mode 'str]
-                    #:length [length 8])
-  (input name show? label mode length #f))
+                    #:length [length 8]
+                    [value #f])
+  (input name show? label mode length value))
 
 (define (format-input-value mode value len)
   (cond
-    [(eq? mode 'str) (substring value 0 len)]
+    [(eq? mode 'str) (substring value 0 (min (string-length value) len))]
     [(eq? mode 'dec) (format-dec value #:min-width len)]
     [(eq? mode 'hex) (format-hex value #:min-width len)]
     [(eq? mode 'bin) (format-bin value #:min-width len)]
