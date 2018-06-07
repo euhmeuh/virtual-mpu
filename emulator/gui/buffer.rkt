@@ -1,8 +1,8 @@
 #lang racket/base
 
 (provide
-  (struct-out _buffer)
-  buffer)
+  (except-out (struct-out buffer) buffer)
+  (rename-out [make-buffer buffer]))
 
 (require
   racket/contract/base
@@ -12,8 +12,6 @@
 (define buffer-mode/c (symbols 'full 'stack))
 
 (struct buffer element (title mode)
-  #:name _buffer
-  #:constructor-name make-buffer
   #:methods gen:displayable
   [(define (display area displayable)
      (charterm-inverse)
@@ -23,8 +21,8 @@
                      (list (+ (area-x area) (area-w area) -1) y) "b"))
      (charterm-normal))])
 
-(define (buffer #:name [name #f]
-                #:show? [show? #t]
-                #:title [title #f]
-                #:mode [mode 'full])
-  (make-buffer name show? title mode))
+(define (make-buffer #:name [name #f]
+                     #:show? [show? #t]
+                     #:title [title #f]
+                     #:mode [mode 'full])
+  (buffer name show? title mode))

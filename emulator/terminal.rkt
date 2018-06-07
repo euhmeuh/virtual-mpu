@@ -99,7 +99,7 @@
         (grid #:name 'registers
               #:dimensions '(2 3)
               #:size '(auto 5)
-              #:padding '(0 0 1 1)
+              #:padding '(0 0 1 0)
               #:spacing 0
           (make-hash
             `([(0 0) . ,(input #:name 'a-input #:label "A" #:mode 'hex #:length 2)]
@@ -124,8 +124,12 @@
               [(4 1) . ,(input #:name 'v-input #:mode 'bin #:length 1)]
               [(5 0) . ,(label " C ")]
               [(5 1) . ,(input #:name 'c-input #:mode 'bin #:length 1)])))
-        (vbox #:name 'machine)
-        (vbox #:name 'commands))
+        (vbox #:name 'machine
+              #:spacing 0
+              #:padding '(0 0 1 1))
+        (vbox #:name 'commands
+              #:spacing 0
+              #:padding '(0 0 1 1)))
       (vbox #:name 'main-view
             #:mode 'balanced
         (hbox #:mode 'balanced
@@ -149,9 +153,9 @@
 (set-input-value! (find-element ui 'v-input) 0)
 (set-input-value! (find-element ui 'c-input) 1)
 (let ([commands (find-element ui 'commands)])
-  (add-child! commands (label "Pause      space"))
-  (add-child! commands (label "Step           s"))
-  (add-child! commands (label "Interrupt      i"))
-  (add-child! commands (label "Exit          ^D")))
+  (add-child! commands (label "Pause      space") 0)
+  (add-child! commands (label "Step           s") 1)
+  (add-child! commands (label "Interrupt      i") 2)
+  (add-child! commands (label "Exit          ^D") 3))
 
 (start ui)

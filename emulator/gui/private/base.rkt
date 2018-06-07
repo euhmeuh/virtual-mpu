@@ -41,14 +41,14 @@
 
 (define-generics parent
   (get-children parent)
-  (add-child! parent child pos)
+  (add-child! parent child [pos])
   #:fallbacks
   [(define (get-children parent)
      (container-elements parent))
-   (define (add-child! parent child pos)
+   (define (add-child! parent child [pos 0])
      (define children (container-elements parent))
      (set-container-elements! parent (append (take children pos)
-                                             child
+                                             (list child)
                                              (drop children pos))))])
 
 (struct element (name show?) #:methods gen:displayable [])

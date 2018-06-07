@@ -1,8 +1,8 @@
 #lang racket/base
 
 (provide
-  (struct-out _screen)
-  screen)
+  (except-out (struct-out screen) screen)
+  (rename-out [make-screen screen]))
 
 (require
   racket/generic
@@ -10,8 +10,6 @@
   "private/base.rkt")
 
 (struct screen container ()
-  #:name _screen
-  #:constructor-name make-screen
   #:methods gen:displayable
   [(define/generic base-display display)
    (define (display area displayable)
@@ -19,9 +17,9 @@
      (display-borders area)
      (for-each (curry base-display area) (get-children displayable)))])
 
-(define (screen #:name [name #f]
-                #:show? [show? #t]
-                #:size [size 'auto]
-                #:padding [padding '(0 0 0 0)]
-                . elements)
-  (make-screen name show? size padding 0 elements))
+(define (make-screen #:name [name #f]
+                     #:show? [show? #t]
+                     #:size [size 'auto]
+                     #:padding [padding '(0 0 0 0)]
+                     . elements)
+  (screen name show? size padding 0 elements))

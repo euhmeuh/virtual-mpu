@@ -1,32 +1,25 @@
-#lang racket/base
+#lang reprovide
 
-(provide
-  (struct-out area)
-  display
+(only-in "private/base.rkt"
+  area?
+  area
+  area-x
+  area-y
+  area-w
+  area-h
+  area-top-left
+  area-top-right
+  area-bottom-left
+  area-bottom-right
   displayable?
+  display
   parent?
   get-children
   add-child!
-  find-element
-  (struct-out _screen)
-  screen
-  (struct-out _box)
-  hbox
-  vbox
-  (struct-out _grid)
-  grid
-  (struct-out _input)
-  input
-  (struct-out _label)
-  label
-  (struct-out _buffer)
-  buffer)
-
-(require
-  "private/base.rkt"
-  "screen.rkt"
-  "box.rkt"
-  "grid.rkt"
-  "input.rkt"
-  "label.rkt"
-  "buffer.rkt")
+  find-element)
+"screen.rkt"
+"box.rkt"
+"grid.rkt"
+"input.rkt"
+"label.rkt"
+"buffer.rkt"

@@ -1,7 +1,7 @@
 #lang racket/base
 
 (provide
-  (struct-out _box)
+  (except-out (struct-out box) box)
   hbox
   vbox)
 
@@ -14,8 +14,6 @@
 (define box-mode/c (symbols 'fit 'balanced))
 
 (struct box container (orientation mode separator)
-  #:name _box
-  #:constructor-name make-box
   #:methods gen:displayable
   [(define/generic base-display display)
    (define (display area displayable)
@@ -49,7 +47,7 @@
               #:mode [mode 'balanced]
               #:separator [separator 'line]
               . elements)
-  (make-box name show? size padding spacing elements 'horizontal mode separator))
+  (box name show? size padding spacing elements 'horizontal mode separator))
 
 (define (vbox #:name [name #f]
               #:show? [show? #t]
@@ -59,4 +57,4 @@
               #:mode [mode 'balanced]
               #:separator [separator 'line]
               . elements)
-  (make-box name show? size padding spacing elements 'vertical mode separator))
+  (box name show? size padding spacing elements 'vertical mode separator))

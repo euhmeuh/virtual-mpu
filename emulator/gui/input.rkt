@@ -1,8 +1,8 @@
 #lang racket/base
 
 (provide
-  (struct-out _input)
-  input)
+  (except-out (struct-out input) input)
+  (rename-out [make-input input]))
 
 (require
   racket/list
@@ -15,8 +15,6 @@
 (define input-mode/c (symbols 'str 'dec 'hex 'bin))
 
 (struct input element (label mode length [value #:mutable])
-  #:name _input
-  #:constructor-name make-input
   #:methods gen:displayable
   [(define (display area displayable)
      (apply charterm-cursor (map add1 (area-top-left area)))
@@ -31,12 +29,12 @@
                                              len))
        (charterm-normal)))])
 
-(define (input #:name [name #f]
-               #:show? [show? #t]
-               #:label [label #f]
-               #:mode [mode 'str]
-               #:length [length 8])
-  (make-input name show? label mode length #f))
+(define (make-input #:name [name #f]
+                    #:show? [show? #t]
+                    #:label [label #f]
+                    #:mode [mode 'str]
+                    #:length [length 8])
+  (input name show? label mode length #f))
 
 (define (format-input-value mode value len)
   (cond

@@ -1,8 +1,8 @@
 #lang racket/base
 
 (provide
-  (struct-out _grid)
-  grid)
+  (except-out (struct-out grid) grid)
+  (rename-out [make-grid grid]))
 
 (require
   racket/match
@@ -11,8 +11,6 @@
   "private/base.rkt")
 
 (struct grid container (dimensions)
-  #:name _grid
-  #:constructor-name make-grid
   #:methods gen:displayable
   [(define/generic base-display display)
    (define (display area displayable)
@@ -36,11 +34,11 @@
    [(define (get-children parent)
       (hash-values (container-elements parent)))])
 
-(define (grid #:name [name #f]
-              #:show? [show? #t]
-              #:size [size 'auto]
-              #:padding [padding '(0 0 0 0)]
-              #:spacing [spacing -1]
-              #:dimensions [dimensions '(2 2)]
-              elements-hash)
-  (make-grid name show? size padding spacing elements-hash dimensions))
+(define (make-grid #:name [name #f]
+                   #:show? [show? #t]
+                   #:size [size 'auto]
+                   #:padding [padding '(0 0 0 0)]
+                   #:spacing [spacing -1]
+                   #:dimensions [dimensions '(2 2)]
+                   elements-hash)
+  (grid name show? size padding spacing elements-hash dimensions))
