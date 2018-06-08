@@ -78,13 +78,12 @@
     ;; default screen
     (set! ui (screen #:size 'auto ui)))
   (with-charterm
-   (define-values (width height) (charterm-screen-size))
-   (charterm-clear-screen)
-   (charterm-cursor 1 1)
-   (let loop ([key #f])
-     (display (area 0 0 width height) ui)
-     (unless (eq? key 'ctrl-d)
-       (loop (charterm-read-key)))))
+    (let loop ([key #f])
+      (define-values (width height) (charterm-screen-size))
+      (charterm-clear-screen)
+      (display (area 0 0 width height) ui)
+      (unless (eq? key 'ctrl-d)
+        (loop (charterm-read-key)))))
   (newline)
   (displayln "Goodbye!"))
 
@@ -100,7 +99,7 @@
               #:dimensions '(2 3)
               #:size '(auto 5)
               #:padding '(0 0 1 1)
-              #:spacing 1
+              #:spacing '(1 0)
           (make-hash
             `([(0 0) . ,(input #:name 'a-input #:label "A" #:mode 'hex #:length 2)]
               [(1 0) . ,(input #:name 'b-input #:label "B" #:mode 'hex #:length 2)]
@@ -110,7 +109,7 @@
         (grid #:name 'status
               #:dimensions '(6 2)
               #:size '(auto 4)
-              #:spacing 0
+              #:spacing '(1 0)
           (make-hash
             `([(0 0) . ,(label " H ")]
               [(0 1) . ,(input #:name 'h-input #:mode 'bin #:length 1)]
@@ -126,11 +125,13 @@
               [(5 1) . ,(input #:name 'c-input #:mode 'bin #:length 1)])))
         (vbox #:name 'machine
               #:mode 'fit
-              #:spacing 0
+              #:spacing -2
+              #:separator 'space
               #:padding '(0 0 1 1))
         (vbox #:name 'commands
-          #:size '(auto 6)
+              #:size '(auto 6)
               #:spacing 0
+              #:separator 'space
               #:padding '(0 0 1 1)))
       (vbox #:name 'main-view
             #:mode 'balanced

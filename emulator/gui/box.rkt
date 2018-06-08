@@ -21,6 +21,7 @@
      (define padding (container-padding displayable))
      (define spacing (container-spacing displayable))
      (define orientation (box-orientation displayable))
+     (define separator (box-separator displayable))
      (define mode (box-mode displayable))
      (define children (get-children displayable))
      (unless (= (length children) 0)
@@ -30,10 +31,10 @@
              (split-fit-area area orientation (resolve-sizes children) #:spacing spacing)))
        (for ([child children]
              [child-area children-areas])
-         (unless (= spacing 0)
+         (unless (eq? separator 'space)
            (if (eq? orientation 'horizontal)
-               (display-line (area-top-right child-area) (area-bottom-right child-area) "|"  #:head "+" #:tail "+")
-               (display-line (area-bottom-left child-area) (area-bottom-right child-area) "-"  #:head "+" #:tail "+")))
+               (display-line (area-top-left child-area) (area-bottom-left child-area) "|"  #:head "+" #:tail "+")
+               (display-line (area-top-left child-area) (area-top-right child-area) "-"  #:head "+" #:tail "+")))
          (base-display
            (pad-area child-area
                      (if (container? child)

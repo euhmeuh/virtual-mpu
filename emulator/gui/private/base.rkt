@@ -23,7 +23,8 @@
   split-fit-area
   resolve-sizes
   display-line
-  display-borders)
+  display-borders
+  display-area)
 
 (require
   racket/generic
@@ -73,7 +74,7 @@
         (if (eq? size 'auto)
             '(auto auto)
             size))
-      '(1 1))))
+      '(3 3))))
 
 (define (min-size a b)
   (cond
@@ -109,6 +110,14 @@
         [(== end-pos) (charterm-display (or tail-char char))]
         [_ (charterm-display char)]))))
 
+(define (display-area area [char " "])
+  (charterm-inverse)
+  (for ([y (in-range (area-y area)
+                     (+ (area-y area) (area-h area)))])
+    (display-line (list (area-x area) y)
+                  (list (+ (area-x area) (area-w area) -1) y) char))
+  (charterm-normal))
+
 (define (split-balanced-area base-area orientation n #:spacing [spacing -1])
   (define-values (new-w rem-w) (quotient/remainder (area-w base-area) n))
   (define-values (new-h rem-h) (quotient/remainder (area-h base-area) n))
@@ -127,7 +136,7 @@
   (define to-be-reduced '()) ;; indexes of auto sized elements
   ;; we start with a fake area that gives us the starting position,
   ;; we get rid of it at the end
-  (for/fold ([areas (list (area base-x base-y 1 1))]
+  (for/fold ([areas (list (area base-x base-y 0 0))]
              #:result
              (let ([areas (drop (reverse areas) 1)])
                (reduce-to-fit
@@ -141,9 +150,10 @@
             ([size sizes]
              [i (in-naturals)])
     (match-define (list size-w size-h) size)
+    (define pad (if (= i 0) 0 spacing)) ;; we don't apply spacing to the first element
     (cons
       (if (eq? orientation 'horizontal)
-        (area (+ (first (area-top-right (first areas))) 1 spacing)
+        (area (+ (first (area-top-right (first areas))) 1 pad)
               base-y
               (if (eq? size-w 'auto)
                   (begin
@@ -154,7 +164,7 @@
                   size-w)
               base-h)
         (area base-x
-              (+ (second (area-bottom-left (first areas))) 1 spacing)
+              (+ (second (area-bottom-left (first areas))) 1 pad)
               base-w
               (if (eq? size-h 'auto)
                   (begin
