@@ -6,6 +6,7 @@
 
 (require
   racket/contract/base
+  racket/match
   charterm
   "private/base.rkt")
 
@@ -22,6 +23,11 @@
                      text-provider)
   (buffer name show? title text-provider))
 
-(define (fit-text-in-area area text)
-  (apply charterm-cursor (map add1 (area-top-left area)))
-  (charterm-display text))
+(define (fit-text-in-area area input)
+  (match-define (list base-x base-y) (map add1 (area-top-left area)))
+  (for ([line (in-lines input)]
+        [y (in-naturals 0)]
+        #:break (>= y (area-h area)))
+    (charterm-cursor base-x (+ base-y y))
+    (charterm-display (substring line 0 (min (string-length line)
+                                             (area-w area))))))

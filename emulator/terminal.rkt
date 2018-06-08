@@ -88,13 +88,13 @@
   (displayln "Goodbye!"))
 
 (define (main-buffer-display area)
-  "Hello world!")
+  (open-input-string "Hello world!\nWhat's up?"))
 
 (define (interrupt-buffer-display area)
-  "Nothing here...")
+  (open-input-string "Nothing here..."))
 
 (define (memory-buffer-display area)
-  "00 01 02 03 AB CD EF")
+  (open-input-string "00 01 02 03 AB CD EF"))
 
 (define ui
   (screen #:size 'auto
