@@ -87,6 +87,15 @@
   (newline)
   (displayln "Goodbye!"))
 
+(define (main-buffer-display area)
+  "Hello world!")
+
+(define (interrupt-buffer-display area)
+  "Nothing here...")
+
+(define (memory-buffer-display area)
+  "00 01 02 03 AB CD EF")
+
 (define ui
   (screen #:size 'auto
     (hbox #:mode 'fit
@@ -134,15 +143,18 @@
               #:separator 'space
               #:padding '(0 0 1 1)))
       (vbox #:name 'main-view
-            #:mode 'balanced
+            #:mode 'fit
         (hbox #:mode 'balanced
           (buffer #:name 'main-buffer
-                  #:title "Main program")
+                  #:title "Main program"
+                  main-buffer-display)
           (buffer #:name 'interrupt-buffer
                   #:title "Interrupt"
-                  #:show? #f))
+                  #:show? #f
+                  interrupt-buffer-display))
         (buffer #:name 'memory-buffer
-                #:title "Stack")))))
+                #:title "Stack"
+                memory-buffer-display)))))
 
 (set-input-value! (find-element ui 'a-input) 12)
 (set-input-value! (find-element ui 'b-input) 42)

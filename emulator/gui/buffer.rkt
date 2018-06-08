@@ -9,15 +9,19 @@
   charterm
   "private/base.rkt")
 
-(define buffer-mode/c (symbols 'full 'stack))
-
-(struct buffer element (title mode)
+(struct buffer element (title text-provider)
   #:methods gen:displayable
   [(define (display area displayable)
-     (display-area area "b"))])
+     (apply charterm-cursor (map + (area-top-left area) '(2 0)))
+     (charterm-display (buffer-title displayable))
+     (fit-text-in-area area ((buffer-text-provider displayable) area)))])
 
 (define (make-buffer #:name [name #f]
                      #:show? [show? #t]
                      #:title [title #f]
-                     #:mode [mode 'full])
-  (buffer name show? title mode))
+                     text-provider)
+  (buffer name show? title text-provider))
+
+(define (fit-text-in-area area text)
+  (apply charterm-cursor (map add1 (area-top-left area)))
+  (charterm-display text))
