@@ -25,7 +25,7 @@
      (define orientation (box-orientation displayable))
      (define separator (box-separator displayable))
      (define mode (box-mode displayable))
-     (define children (get-children displayable))
+     (define children (filter element-show? (get-children displayable)))
      (unless (= (length children) 0)
        (define children-areas
          (if (eq? mode 'balanced)

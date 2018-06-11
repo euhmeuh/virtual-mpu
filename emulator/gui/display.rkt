@@ -48,15 +48,15 @@
   (charterm-display text))
 
 (define (display-clear)
-  (charterm-clear-screen))
+  (display-text "\e[;H\e[2J"))
 
 (define (display-set-cursor pos)
   (apply charterm-cursor (map add1 pos)))
 
 (define (display-reverse)
   (if (eq? (current-display-mode) 'reverse)
-      (charterm-display "\x1B[7m")
-      (charterm-display "\x1B[27m")))
+      (charterm-display "\e[30;47m") ; black FG on white BG
+      (charterm-display "\e[39;49m")))
 
 (define-syntax-rule (with-underline body ...)
   (begin

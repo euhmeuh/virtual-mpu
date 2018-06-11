@@ -27,7 +27,8 @@
                                           'vertical
                                           (second dimensions)
                                           #:spacing (second (container-spacing displayable)))))
-     (for ([(pos child) (in-hash (container-elements displayable))])
+     (for ([(pos child) (in-hash (container-elements displayable))]
+           #:when (element-show? child))
        (match-define (list x y) pos)
        (define child-area (list-ref (list-ref areas x) y))
        (base-display child-area child)))]

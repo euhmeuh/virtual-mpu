@@ -16,9 +16,10 @@
   [(define/generic base-display display)
    (define (display area displayable)
      (set! area (get-display-area area (container-size displayable)))
-     (display-area area)
+     ;(display-area area)
      (display-borders area)
-     (for-each (curry base-display area) (get-children displayable)))])
+     (for-each (curry base-display area)
+               (filter element-show? (get-children displayable))))])
 
 (define (make-screen #:name [name #f]
                      #:show? [show? #t]

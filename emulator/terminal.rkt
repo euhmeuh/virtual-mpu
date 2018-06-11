@@ -81,6 +81,7 @@
   (current-display-mode 'reverse)
   (with-charterm
     (let loop ([key #f])
+      (handle-key key)
       (define-values (width height) (charterm-screen-size))
       (display-clear)
       (display (area 0 0 width height) ui)
@@ -89,6 +90,10 @@
     (charterm-normal))
   (newline)
   (displayln "Goodbye!"))
+
+(define (handle-key key)
+  (cond
+    [(eq? key #\i) (toggle-interrupt-panel)]))
 
 (define (main-buffer-display area)
   (open-input-string "Hello world!\nWhat's up?"))
@@ -158,6 +163,9 @@
         (buffer #:name 'memory-buffer
                 #:title "Stack"
                 memory-buffer-display)))))
+
+(define (toggle-interrupt-panel)
+  (element-toggle! (find-element ui 'interrupt-buffer)))
 
 (set-input-value! (find-element ui 'a-input) 12)
 (set-input-value! (find-element ui 'b-input) 42)

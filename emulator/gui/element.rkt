@@ -12,7 +12,10 @@
   get-children
   add-child!
   find-element
-  resolve-sizes)
+  resolve-sizes
+  element-show!
+  element-hide!
+  element-toggle!)
 
 (require
   racket/generic
@@ -38,7 +41,7 @@
                                              (list child)
                                              (drop children pos))))])
 
-(struct element (name show?) #:methods gen:displayable [])
+(struct element (name [show? #:mutable]) #:methods gen:displayable [])
 (struct container element (size padding spacing [elements #:mutable]) #:methods gen:parent [])
 
 (define (find-element container name)
@@ -61,3 +64,13 @@
             '(auto auto)
             size))
       '(3 3))))
+
+(define (element-show! element)
+  (set-element-show?! element #t))
+
+(define (element-hide! element)
+  (set-element-show?! element #f))
+
+(define (element-toggle! element)
+  (define show? (element-show? element))
+  (set-element-show?! element (not show?)))
