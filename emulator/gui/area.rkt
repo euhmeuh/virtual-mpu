@@ -6,117 +6,52 @@
   area-top-right
   area-bottom-left
   area-bottom-right
-  (struct-out element)
-  (struct-out container)
-  separator/c
-  gen:displayable
-  displayable?
-  display
-  gen:parent
-  parent?
-  get-children
-  add-child!
-  find-element
   get-display-area
-  pad-area
   split-balanced-area
   split-fit-area
-  resolve-sizes
-  display-line
-  display-borders
-  display-area)
+  pad-area)
 
 (require
-  racket/generic
   racket/list
-  racket/match
-  racket/contract/base
-  charterm)
+  racket/match)
 
-(define separator/c (symbols 'line 'double 'dash 'space))
+(struct area (x y w h) #:transparent)
 
-(define-generics displayable
-  (display area displayable)
-  #:fallbacks
-  [(define (display area displayable) (void))])
+(define (area-top-left an-area)
+  (list (area-x an-area) (area-y an-area)))
 
-(define-generics parent
-  (get-children parent)
-  (add-child! parent child [pos])
-  #:fallbacks
-  [(define (get-children parent)
-     (container-elements parent))
-   (define (add-child! parent child [pos 0])
-     (define children (container-elements parent))
-     (set-container-elements! parent (append (take children pos)
-                                             (list child)
-                                             (drop children pos))))])
+(define (area-top-right an-area)
+  (list (+ (area-x an-area)
+           (area-w an-area)
+           -1)
+        (area-y an-area)))
 
-(struct element (name show?) #:methods gen:displayable [])
-(struct container element (size padding spacing [elements #:mutable]) #:methods gen:parent [])
+(define (area-bottom-left an-area)
+  (list (area-x an-area)
+        (+ (area-y an-area)
+           (area-h an-area)
+           -1)))
 
-(define (find-element container name)
-  (let loop [(elements (cons container (get-children container)))]
-    (if (pair? elements)
-        (let ([elt (car elements)])
-          (if (eq? (element-name elt) name)
-              elt
-              (loop (append (if (container? elt)
-                                (get-children elt)
-                                '())
-                            (cdr elements)))))
-        #f)))
+(define (area-bottom-right an-area)
+  (list (+ (area-x an-area)
+           (area-w an-area)
+           -1)
+        (+ (area-y an-area)
+           (area-h an-area)
+           -1)))
 
-(define (resolve-sizes elements)
-  (for/list ([element elements])
-    (if (container? element)
-      (let ([size (container-size element)])
-        (if (eq? size 'auto)
-            '(auto auto)
-            size))
-      '(3 3))))
-
-(define (min-size a b)
-  (cond
-    [(eq? a 'auto) b]
-    [(eq? b 'auto) a]
-    [else (min a b)]))
-
-(define (get-display-area an-area container)
-  (define size (container-size container))
+(define (get-display-area an-area size)
   (if (eq? 'auto size)
       an-area
       (struct-copy area an-area
         [w (min-size (area-w an-area) (first size))]
         [h (min-size (area-h an-area) (second size))])))
 
-(define (display-borders an-area)
-  (display-line (area-top-left an-area)    (area-top-right an-area)    "-" #:head "+" #:tail "+")
-  (display-line (area-top-left an-area)    (area-bottom-left an-area)  "|" #:head "+" #:tail "+")
-  (display-line (area-bottom-left an-area) (area-bottom-right an-area) "-" #:head "+" #:tail "+")
-  (display-line (area-top-right an-area)   (area-bottom-right an-area) "|" #:head "+" #:tail "+"))
-
-(define (display-line start-pos end-pos char
-                      #:head [head-char #f]
-                      #:tail [tail-char #f])
-  (define-values
-    (base-x base-y end-x end-y)
-    (apply values (append start-pos end-pos)))
-  (for ([x (in-range base-x (add1 end-x))])
-    (for ([y (in-range base-y (add1 end-y))])
-      (charterm-cursor (+ 1 x) (+ 1 y))
-      (match (list x y)
-        [(== start-pos) (charterm-display (or head-char char))]
-        [(== end-pos) (charterm-display (or tail-char char))]
-        [_ (charterm-display char)]))))
-
-(define (display-area area [char " "])
-  (charterm-inverse)
-  (for ([y (in-range (area-y area)
-                     (+ (area-y area) (area-h area)))])
-    (display-line (list (area-x area) y)
-                  (list (+ (area-x area) (area-w area) -1) y) char))
-  (charterm-normal))
+(define (min-size a b)
+  (cond
+    [(eq? a 'auto) b]
+    [(eq? b 'auto) a]
+    [else (min a b)]))
 
 (define (split-balanced-area base-area orientation n #:spacing [spacing -1])
   (define-values (new-w rem-w) (quotient/remainder (area-w base-area) n))
@@ -204,28 +139,3 @@
            (+ y t)
            (- w (+ l r))
            (- h (+ t b)))]))
-
-(struct area (x y w h) #:transparent)
-
-(define (area-top-left an-area)
-  (list (area-x an-area) (area-y an-area)))
-
-(define (area-top-right an-area)
-  (list (+ (area-x an-area)
-           (area-w an-area)
-           -1)
-        (area-y an-area)))
-
-(define (area-bottom-left an-area)
-  (list (area-x an-area)
-        (+ (area-y an-area)
-           (area-h an-area)
-           -1)))
-
-(define (area-bottom-right an-area)
-  (list (+ (area-x an-area)
-           (area-w an-area)
-           -1)
-        (+ (area-y an-area)
-           (area-h an-area)
-           -1)))

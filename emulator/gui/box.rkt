@@ -8,7 +8,9 @@
 (require
   racket/contract/base
   racket/generic
-  "private/base.rkt")
+  "area.rkt"
+  "element.rkt"
+  "display.rkt")
 
 (define box-orientation/c (symbols 'horizontal 'vertical))
 (define box-mode/c (symbols 'fit 'balanced))
@@ -17,7 +19,7 @@
   #:methods gen:displayable
   [(define/generic base-display display)
    (define (display area displayable)
-     (set! area (get-display-area area displayable))
+     (set! area (get-display-area area (container-size displayable)))
      (define padding (container-padding displayable))
      (define spacing (container-spacing displayable))
      (define orientation (box-orientation displayable))

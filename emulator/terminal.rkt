@@ -2,6 +2,7 @@
 
 (require
   charterm
+  "gui/display.rkt"
   "gui/base.rkt")
 
 #| Mockup 1: Main view
@@ -77,13 +78,15 @@
   (unless (screen? ui)
     ;; default screen
     (set! ui (screen #:size 'auto ui)))
+  (current-display-mode 'reverse)
   (with-charterm
     (let loop ([key #f])
       (define-values (width height) (charterm-screen-size))
-      (charterm-clear-screen)
+      (display-clear)
       (display (area 0 0 width height) ui)
       (unless (eq? key 'ctrl-d)
-        (loop (charterm-read-key)))))
+        (loop (charterm-read-key))))
+    (charterm-normal))
   (newline)
   (displayln "Goodbye!"))
 

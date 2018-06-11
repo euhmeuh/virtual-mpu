@@ -8,13 +8,14 @@
   racket/match
   racket/generic
   racket/list
-  "private/base.rkt")
+  "area.rkt"
+  "element.rkt")
 
 (struct grid container (dimensions)
   #:methods gen:displayable
   [(define/generic base-display display)
    (define (display area displayable)
-     (set! area (get-display-area area displayable))
+     (set! area (get-display-area area (container-size displayable)))
      (define padding (container-padding displayable))
      (define dimensions (grid-dimensions displayable))
      (define areas (for/list ([x-area (split-balanced-area

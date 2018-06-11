@@ -7,13 +7,16 @@
 (require
   racket/generic
   racket/function
-  "private/base.rkt")
+  "area.rkt"
+  "element.rkt"
+  "display.rkt")
 
 (struct screen container ()
   #:methods gen:displayable
   [(define/generic base-display display)
    (define (display area displayable)
-     (set! area (get-display-area area displayable))
+     (set! area (get-display-area area (container-size displayable)))
+     (display-area area)
      (display-borders area)
      (for-each (curry base-display area) (get-children displayable)))])
 

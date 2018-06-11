@@ -8,8 +8,9 @@
   racket/list
   racket/match
   racket/contract/base
-  charterm
-  "private/base.rkt"
+  "area.rkt"
+  "element.rkt"
+  "display.rkt"
   "../../utils.rkt")
 
 (define input-mode/c (symbols 'str 'dec 'hex 'bin))
@@ -17,20 +18,19 @@
 (struct input element (label mode length [value #:mutable])
   #:methods gen:displayable
   [(define (display area displayable)
-     (apply charterm-cursor (map add1 (area-top-left area)))
-     (charterm-display (or (input-label displayable) ""))
+     (display-set-cursor (area-top-left area))
+     (display-text (or (input-label displayable) ""))
      (when (input-value displayable)
        (define len (input-length displayable))
        (define value (format-input-value (input-mode displayable)
                                          (input-value displayable)
                                          len))
-       (charterm-underline)
-       (apply charterm-cursor (match (area-top-right area)
-                                [(list x y)
-                                 (list (+ 2 (- x (string-length value)))
-                                       (+ 1 y))]))
-       (charterm-display value)
-       (charterm-normal)))])
+       (with-underline
+         (display-set-cursor (match (area-top-right area)
+                                  [(list x y)
+                                   (list (+ 1 (- x (string-length value)))
+                                         y)]))
+         (display-text value))))])
 
 (define (make-input #:name [name #f]
                     #:show? [show? #t]

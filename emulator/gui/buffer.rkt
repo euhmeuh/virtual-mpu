@@ -7,14 +7,15 @@
 (require
   racket/contract/base
   racket/match
-  charterm
-  "private/base.rkt")
+  "area.rkt"
+  "element.rkt"
+  "display.rkt")
 
 (struct buffer element (title text-provider)
   #:methods gen:displayable
   [(define (display area displayable)
-     (apply charterm-cursor (map + (area-top-left area) '(2 0)))
-     (charterm-display (buffer-title displayable))
+     (display-set-cursor (map + (area-top-left area) '(1 -1)))
+     (display-text (buffer-title displayable))
      (fit-text-in-area area ((buffer-text-provider displayable) area)))])
 
 (define (make-buffer #:name [name #f]
@@ -24,10 +25,10 @@
   (buffer name show? title text-provider))
 
 (define (fit-text-in-area area input)
-  (match-define (list base-x base-y) (map add1 (area-top-left area)))
+  (match-define (list base-x base-y) (area-top-left area))
   (for ([line (in-lines input)]
         [y (in-naturals 0)]
         #:break (>= y (area-h area)))
-    (charterm-cursor base-x (+ base-y y))
-    (charterm-display (substring line 0 (min (string-length line)
-                                             (area-w area))))))
+    (display-set-cursor (list base-x (+ base-y y)))
+    (display-text (substring line 0 (min (string-length line)
+                                         (area-w area))))))
