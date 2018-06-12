@@ -1,0 +1,135 @@
+(mpu
+  (name "6802")
+  (registers (a b sr [ix 16] [sp 16] [pc 16]))
+  (status sr (carry zero sign overflow interrupt half))
+  (operations
+
+    ;; branches
+    (bcc "Branch if carry clear" (when carry? branch))
+    (bcs "Branch if carry set" (when (negate carry?) branch))
+
+    (bvc "Branch if overflow clear" (when overflow? branch))
+    (bvs "Branch if overflow set" (when (negate overflow?) branch))
+
+    (beq "Branch if =0" (when zero? branch))
+    (bne "Branch if !=0" (when (negate zero?) branch))
+
+    (bge "Branch if >=0" (when (negate (xor/c sign? overflow?)) branch))
+    (blt "Branch if <0" (when (xor/c sign? overflow?) branch))
+
+    (ble "Branch if <=0" (when (or/c zero? (xor/c sign? overflow?)) branch))
+    (bgt "Branch if >0" (when (negate (or/c zero? (xor/c sign? overflow?))) branch))
+
+    (bhi "Branch if higher" (when (negate (or/c zero? carry?)) branch))
+    (bls "Branch if lesser" (when (or/c zero? carry?) branch))
+
+    (bmi "Branch if minus" (when sign? branch))
+    (bpl "Branch if plus" (when (negate sign?) branch))
+
+    (bra "Branch always" branch)
+    (bsr "Branch always to subroutine" (thunkpose
+                                         (push! (low pc) sp)
+                                         (push! (high pc) sp)
+                                         branch))
+
+    ;; moves
+    (lda "Load ~a -> ~a" ->)
+    (lds "Load ~a -> SP" (cut -> <> sp))
+    (ldx "Load ~a -> IX" (cut -> <> ix))
+    (sta "Store ~a -> ~a" (reverse-args ->))
+    (sts "Store SP -> ~a" (cut -> sp <>))
+    (stx "Store IX -> ~a" (cut -> ix <>))
+    (tab "A -> B" (a . -> . b))
+    (tba "B -> A" (b . -> . a))
+    (tap "A -> SR" (a . -> . sr))
+    (tpa "SR -> A" (sr . -> . a))
+    (tsx "SP + 1 -> IX" ((+ sp 1) . -> . ix))
+    (txs "IX - 1 -> SP" ((- ix 1) . -> . sp))
+
+    ;; control
+    (dex "IX - 1 -> IX")
+    (inx "IX + 1 -> IX")
+    (jmp "Jump to ~a")
+    (jsr "Jump to subroutine at ~a")
+    (rts "Return from subroutine")
+    (rti "Return from interrupt")
+    (swi "Software interrupt")
+
+    ;; stack
+    (des "SP - 1 -> SP" ((- sp 1) . -> . sp))
+    (ins "SP + 1 -> SP" ((+ sp 1) . -> . sp))
+    (psh "~a -> [SP]" (cut push! <> sp))
+    (pul "[SP] -> ~a" (cut pull! <> sp))
+
+    ;; maths
+    (aba "A + B -> A")
+    (adc "~a + ~a (with carry)")
+    (add "~a + ~a (without carry)")
+    (sba "A - B -> A")
+    (sbc "~a - ~a (with carry)")
+    (sub "~a - ~a (without carry)")
+    (and "~a AND ~a")
+    (ora "~a OR ~a")
+    (eor "~a XOR ~a")
+    (asl "~a shifted left")
+    (asr "~a shifted right")
+    (lsr "~a logically shifted right")
+    (dec "~a - 1")
+    (inc "~a + 1")
+    (rol "Rotate left through carry")
+    (ror "Rotate right through carry")
+    (com "Complement ~a -> ~a")
+    (neg "Negate ~a -> ~a")
+    (daa "Decimal adjust A")
+
+    ;; status
+    (bit "A AND B -> SR")
+    (cba "A - B -> SR")
+    (cmp "~a - ~a -> SR")
+    (cpx "IX - ~a -> SR")
+    (tst "~a - 0 -> SR")
+
+    ;; clear
+    (clr "Clear ~a")
+    (clc "Clear carry")
+    (cli "Clear interrupt")
+    (clv "Clear overflow")
+
+    ;; set
+    (sec "Set carry")
+    (sei "Set interrupt")
+    (sev "Set overflow")
+
+    ;; noop
+    (nop "Do nothing")
+    (wai "Wait for interrupt")
+    ))
+
+(define ((-> orig dest))
+  (set! dest orig))
+
+(define ((reverse-args func) a b)
+  (func b a))
+
+(define (branch rel)
+  ((+ pc rel 2) . -> . pc))
+
+(define (push! reg pointer)
+  (thunkpose
+    (reg . -> . (ref pointer))
+    ((- pointer 1) . -> . pointer)))
+
+(define (pull! reg pointer)
+  (thunkpose
+    ((+ pointer 1) . -> . pointer)
+    ((ref pointer) . -> . reg)))
+
+(define (high reg)
+  (arithmetic-and (arithmetic-shift reg -1) #xFF))
+
+(define (low reg)
+  (arithmetic-and reg #xFF))
+
+(define ((thunkpose . thunks))
+  (for ([thunk (in-list thunks)])
+    (thunk)))
