@@ -4,7 +4,7 @@
   ril011w-address-decode)
 
 (require
-  "utils.rkt")
+  "../utils.rkt")
 
 ;; RIL011W memory map:
 ;; [0x0000...0x0FFF][0x1000 0x1001][0x1002...0X1FFF][0x2000...0xFFF7]

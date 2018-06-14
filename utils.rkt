@@ -43,12 +43,12 @@
     [else lst]))
 
 (define (split-into-bytes result value [size #f])
-    (if (if size (<= size 1)
-                 (<= value #xFF))
-        (cons value result)
-        (split-into-bytes (cons (bitwise-and value #xFF) result)
-                          (arithmetic-shift value -8)
-                          (and size (- size 1)))))
+  (if (if size (<= size 1)
+               (<= value #xFF))
+      (cons value result)
+      (split-into-bytes (cons (bitwise-and value #xFF) result)
+                        (arithmetic-shift value -8)
+                        (and size (- size 1)))))
 
 (define (number->7bit-signed value)
   (if (or (> value 127) (< value -128))
