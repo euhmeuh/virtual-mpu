@@ -1,19 +1,20 @@
 #lang racket/base
 
 (require
+  racket/class
   racket/function
   racket/bool
   racket/stxparam
   (for-syntax
     racket/base
+    racket/class
     racket/list
     racket/syntax
     syntax/parse
     syntax/stx))
 
-(struct mpu-info (name registers status interrupts operations) #:transparent)
 (struct status-info (register bits) #:transparent)
-(struct reg-info (name size getter setter) #:transparent)
+(struct reg-info (name size) #:transparent)
 (struct op-info (name desc proc) #:transparent)
 
 (begin-for-syntax
@@ -43,39 +44,42 @@
     [(_ name (registers (r:register ...))
              (status status-reg (bit ...))
              (interrupts [int-name int-value] ...)
-             operations)
+             ops)
      #:with bits #'(bit ...)
      #:with ((bit? pos) ...) (stx-map (lambda (id)
                                         #`(#,(format-id id "~a?" id)
                                            #,(expt 2 (index-of (syntax->list #'bits) id))))
                                       #'bits)
-     #'(let* ([r.name 0] ...
-              [bit? (thunk (= 0 (bitwise-and status-reg pos)))] ...
-              [registers (make-hasheq `([r.name . ,(reg-info 'r.name
-                                                  r.size
-                                                  (thunk r.name)
-                                                  (lambda (v) (set! r.name v)))] ...))])
-         (mpu-info
-           name
-           registers
-           (status-info 'status-reg 'bits)
-           (make-hasheq '([int-name . int-value] ...))
-           (syntax-parameterize
-             ([-> (lambda (stx)
-                    (syntax-case stx () [(_ src dest) (if (member (syntax->datum #'dest)
-                                                                  (syntax->datum #'(r.name ...)))
-                                                          #'(set! dest src)
-                                                          #'(memory-set! dest src))]))]
-              [branch (syntax-rules () [(_ pc condition rel)
-                                        (begin (when condition
-                                               ((+ pc rel) . -> . pc)))])]
-              [push! (syntax-rules () [(_ reg value)
-                                       (begin (value . -> . (ref reg))
-                                              ((- reg 1) . -> . reg))])]
-              [pull! (syntax-rules () [(_ reg dest)
-                                       (begin ((+ reg 1) . -> . reg)
-                                              ((ref reg) . -> . dest))])])
-             operations)))]))
+     #'(class object%
+         (super-new)
+         (field [r.name 0] ...
+                [bit? (thunk (= 0 (bitwise-and status-reg pos)))] ...
+                [registers (make-hasheq `([r.name . ,(reg-info 'r.name r.size)] ...))]
+                [status (status-info 'status-reg 'bits)]
+                [interrupts (make-hasheq '([int-name . int-value] ...))]
+                [operations
+                 (syntax-parameterize
+                   ([-> (lambda (stx)
+                          (syntax-case stx () [(_ src dest) (if (member (syntax->datum #'dest)
+                                                                        (syntax->datum #'(r.name ...)))
+                                                                #'(set! dest src)
+                                                                #'(memory-set! dest src))]))]
+                    [branch (syntax-rules () [(_ pc condition rel)
+                                              (begin (when condition
+                                                       ((+ pc rel) . -> . pc)))])]
+                    [push! (syntax-rules () [(_ reg value)
+                                             (begin (value . -> . (ref reg))
+                                                    ((- reg 1) . -> . reg))])]
+                    [pull! (syntax-rules () [(_ reg dest)
+                                             (begin ((+ reg 1) . -> . reg)
+                                                    ((ref reg) . -> . dest))])])
+                   ops)])
+
+         (define/public (call op . operands)
+           (define found-op (hash-ref operations op #f))
+           (when found-op
+             (displayln (apply format (op-info-desc found-op) operands))
+             (apply (op-info-proc found-op) operands))))]))
 
 (define-syntax (operations stx)
   (syntax-parse stx
@@ -96,24 +100,10 @@
 (define (ref reg)
   reg)
 
-(define (mpu-call mpu op . operands)
-  (define found-op (hash-ref (mpu-info-operations mpu) op #f))
-  (when found-op
-    (displayln (apply format (op-info-desc found-op) operands))
-    (apply (op-info-proc found-op) operands)))
-
-(define (mpu-get-reg mpu reg)
-  (define found-reg (hash-ref (mpu-info-registers mpu) reg #f))
-  (and found-reg ((reg-info-getter found-reg))))
-
-(define (mpu-set-reg! mpu reg value)
-  (define found-reg (hash-ref (mpu-info-registers mpu) reg #f))
-  (and found-reg ((reg-info-setter found-reg) value)))
-
 (define (memory-set! addr value)
   (void))
 
-(define the-mpu
+(define mpu%
   (mpu "6802"
     (registers (a b sr [ix 16] [sp 16] [pc 16]))
     (status sr (carry zero sign overflow interrupt half))
@@ -220,14 +210,16 @@
       (wai "Wait for interrupt" () (void))
       )))
 
-(displayln (format "A: ~a" (mpu-get-reg the-mpu 'a)))
-(displayln (format "B: ~a" (mpu-get-reg the-mpu 'b)))
-(displayln (format "PC: ~a" (mpu-get-reg the-mpu 'pc)))
-(mpu-call the-mpu 'lda 'a #x08)
-(mpu-call the-mpu 'tab)
-(mpu-call the-mpu 'clc)
-(mpu-call the-mpu 'aba)
-(mpu-call the-mpu 'bra #x4)
-(displayln (format "A: ~a" (mpu-get-reg the-mpu 'a)))
-(displayln (format "B: ~a" (mpu-get-reg the-mpu 'b)))
-(displayln (format "PC: ~a" (mpu-get-reg the-mpu 'pc)))
+(define the-mpu (new mpu%))
+
+(displayln (format "A: ~a" (get-field a the-mpu)))
+(displayln (format "B: ~a" (get-field b the-mpu)))
+(displayln (format "PC: ~a" (get-field pc the-mpu)))
+(send the-mpu call 'lda 'a #x08)
+(send the-mpu call 'tab)
+(send the-mpu call 'clc)
+(send the-mpu call 'aba)
+(send the-mpu call 'bra #x4)
+(displayln (format "A: ~a" (get-field a the-mpu)))
+(displayln (format "B: ~a" (get-field b the-mpu)))
+(displayln (format "PC: ~a" (get-field pc the-mpu)))
