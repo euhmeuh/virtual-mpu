@@ -3,6 +3,7 @@
 (require
   racket/function
   racket/bool
+  racket/stxparam
   (for-syntax
     racket/base
     racket/list
@@ -12,6 +13,7 @@
 
 (struct mpu-info (name registers status interrupts operations) #:transparent)
 (struct status-info (register bits) #:transparent)
+(struct reg-info (name size getter setter) #:transparent)
 (struct op-info (name desc proc) #:transparent)
 
 (begin-for-syntax
@@ -19,46 +21,71 @@
     (pattern (name size))
     (pattern name #:with size #'8)))
 
+(define-syntax-parameter ->
+  (lambda (stx)
+    (raise-syntax-error '-> "can only be used inside of mpu definition" stx)))
+
+(define-syntax-parameter branch
+  (lambda (stx)
+    (raise-syntax-error 'branch "can only be used inside of mpu definition" stx)))
+
+(define-syntax-parameter push!
+  (lambda (stx)
+    (raise-syntax-error 'push! "can only be used inside of mpu definition" stx)))
+
+(define-syntax-parameter pull!
+  (lambda (stx)
+    (raise-syntax-error 'pull! "can only be used inside of mpu definition" stx)))
+
 (define-syntax (mpu stx)
   (syntax-parse stx
     #:datum-literals (registers status interrupts)
-    [(_ name (registers (r:register ...)) (status status-reg (bit ...)) (interrupts [int-name int-value] ...) operations)
+    [(_ name (registers (r:register ...))
+             (status status-reg (bit ...))
+             (interrupts [int-name int-value] ...)
+             operations)
      #:with bits #'(bit ...)
      #:with ((bit? pos) ...) (stx-map (lambda (id)
                                         #`(#,(format-id id "~a?" id)
                                            #,(expt 2 (index-of (syntax->list #'bits) id))))
                                       #'bits)
      #'(let* ([r.name 0] ...
-              [bit? (thunk (= 0 (bitwise-and status-reg pos)))] ...)
+              [bit? (thunk (= 0 (bitwise-and status-reg pos)))] ...
+              [registers (make-hasheq `([r.name . ,(reg-info 'r.name
+                                                  r.size
+                                                  (thunk r.name)
+                                                  (lambda (v) (set! r.name v)))] ...))])
          (mpu-info
            name
-           (make-hasheq `([r.name (cons ,r.name r.size)] ...))
+           registers
            (status-info 'status-reg 'bits)
-           (make-hasheq '([int-name int-value] ...))
-           operations))]))
+           (make-hasheq '([int-name . int-value] ...))
+           (syntax-parameterize
+             ([-> (lambda (stx)
+                    (syntax-case stx () [(_ src dest) (if (member (syntax->datum #'dest)
+                                                                  (syntax->datum #'(r.name ...)))
+                                                          #'(set! dest src)
+                                                          #'(memory-set! dest src))]))]
+              [branch (syntax-rules () [(_ pc condition rel)
+                                        (begin (when condition
+                                               ((+ pc rel) . -> . pc)))])]
+              [push! (syntax-rules () [(_ reg value)
+                                       (begin (value . -> . (ref reg))
+                                              ((- reg 1) . -> . reg))])]
+              [pull! (syntax-rules () [(_ reg dest)
+                                       (begin ((+ reg 1) . -> . reg)
+                                              ((ref reg) . -> . dest))])])
+             operations)))]))
 
 (define-syntax (operations stx)
   (syntax-parse stx
     [(_ (name desc (arg ...) body ...) ...)
-     #'(make-hasheq `([name ,(op-info 'name 'desc (lambda (arg ...) body ...))] ...))]))
-
-(define (-> src dest)
-  (set! dest src))
+     #'(make-hasheq `([name . ,(op-info 'name
+                                        'desc
+                                        (lambda (arg ...) body ...))] ...))]))
 
 (define ((reverse-args dual-arity-proc) a b)
   (dual-arity-proc b a))
-
-(define (branch pc condition rel)
-  (when condition
-    ((+ pc rel) . -> . pc)))
-
-(define (push! reg value)
-  (value . -> . (ref reg))
-  ((- reg 1) . -> . reg))
-
-(define (pull! reg dest)
-  ((+ reg 1) . -> . reg)
-  ((ref reg) . -> . dest))
 
 (define (high reg)
   (bitwise-and (arithmetic-shift reg -8) #xFF))
@@ -68,6 +95,23 @@
 
 (define (ref reg)
   reg)
+
+(define (mpu-call mpu op . operands)
+  (define found-op (hash-ref (mpu-info-operations mpu) op #f))
+  (when found-op
+    (displayln (apply format (op-info-desc found-op) operands))
+    (apply (op-info-proc found-op) operands)))
+
+(define (mpu-get-reg mpu reg)
+  (define found-reg (hash-ref (mpu-info-registers mpu) reg #f))
+  (and found-reg ((reg-info-getter found-reg))))
+
+(define (mpu-set-reg! mpu reg value)
+  (define found-reg (hash-ref (mpu-info-registers mpu) reg #f))
+  (and found-reg ((reg-info-setter found-reg) value)))
+
+(define (memory-set! addr value)
+  (void))
 
 (define the-mpu
   (mpu "6802"
@@ -98,18 +142,18 @@
       (bmi "Branch if minus" (rel) (branch pc (sign?) rel))
       (bpl "Branch if plus" (rel) (branch pc (not (sign?)) rel))
 
-      (bra "Branch always" (rel) (branch pc #t rel))
-      (bsr "Branch always to subroutine" (rel) (push! sp (low pc))
-                                               (push! sp (high pc))
-                                               (branch pc #t rel))
+      (bra "Branch always to ~a" (rel) (branch pc #t rel))
+      (bsr "Branch always to subroutine ~a" (rel) (push! sp (low pc))
+                                                  (push! sp (high pc))
+                                                  (branch pc #t rel))
 
       ;; moves
-      (lda "Load ~a -> ~a"  (src dest) (src . -> . dest))
-      (lds "Load ~a -> SP"  (src)      (src . -> . sp))
-      (ldx "Load ~a -> IX"  (src)      (src . -> . ix))
-      (sta "Store ~a -> ~a" (dest src) (src . -> . dest))
-      (sts "Store SP -> ~a" (dest)     (sp . -> . dest))
-      (stx "Store IX -> ~a" (dest)     (ix . -> . dest))
+      (lda "Load ~a -> ~a"  (dest val) (val . -> . dest))
+      (lds "Load ~a -> SP"  (val)      (val . -> . sp))
+      (ldx "Load ~a -> IX"  (val)      (val . -> . ix))
+      (sta "Store ~a -> ~a" (reg dest) (reg . -> . (ref dest)))
+      (sts "Store SP -> ~a" (dest)     (sp . -> . (ref dest)))
+      (stx "Store IX -> ~a" (dest)     (ix . -> . (ref dest)))
       (tab "A -> B"       () (a . -> . b))
       (tba "B -> A"       () (b . -> . a))
       (tap "A -> SR"      () (a . -> . sr))
@@ -133,7 +177,7 @@
       (pul "[SP] -> ~a" (dest) (pull! sp dest))
 
       ;; maths
-      (aba "A + B -> A" () (void))
+      (aba "A + B -> A" () ((+ a b) . -> . a))
       (adc "~a + ~a (with carry)" () (void))
       (add "~a + ~a (without carry)" () (void))
       (sba "A - B -> A" () (void))
@@ -176,4 +220,14 @@
       (wai "Wait for interrupt" () (void))
       )))
 
-(displayln the-mpu)
+(displayln (format "A: ~a" (mpu-get-reg the-mpu 'a)))
+(displayln (format "B: ~a" (mpu-get-reg the-mpu 'b)))
+(displayln (format "PC: ~a" (mpu-get-reg the-mpu 'pc)))
+(mpu-call the-mpu 'lda 'a #x08)
+(mpu-call the-mpu 'tab)
+(mpu-call the-mpu 'clc)
+(mpu-call the-mpu 'aba)
+(mpu-call the-mpu 'bra #x4)
+(displayln (format "A: ~a" (mpu-get-reg the-mpu 'a)))
+(displayln (format "B: ~a" (mpu-get-reg the-mpu 'b)))
+(displayln (format "PC: ~a" (mpu-get-reg the-mpu 'pc)))
