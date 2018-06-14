@@ -63,7 +63,7 @@
                           (syntax-case stx () [(_ src dest) (if (member (syntax->datum #'dest)
                                                                         (syntax->datum #'(r.name ...)))
                                                                 #'(set! dest src)
-                                                                #'(memory-set! dest src))]))]
+                                                                #'(dynamic-set! this dest src))]))]
                     [branch (syntax-rules () [(_ pc condition rel)
                                               (begin (when condition
                                                        ((+ pc rel) . -> . pc)))])]
@@ -99,6 +99,11 @@
 
 (define (ref reg)
   reg)
+
+(define (dynamic-set! mpu src value)
+  (if (symbol? src)
+      (dynamic-set-field! src mpu value)
+      (memory-set! src value)))
 
 (define (memory-set! addr value)
   (void))
