@@ -2,6 +2,7 @@
 
 (require
   racket/function
+  racket/bool
   (for-syntax
     racket/base
     racket/list
@@ -11,6 +12,7 @@
 
 (struct mpu-info (name registers status interrupts operations) #:transparent)
 (struct status-info (register bits) #:transparent)
+(struct op-info (name desc proc) #:transparent)
 
 (begin-for-syntax
   (define-syntax-class register
@@ -30,10 +32,15 @@
               [bit? (thunk (= 0 (bitwise-and status-reg pos)))] ...)
          (mpu-info
            name
-           (make-hasheq '([r.name (cons ,r.name r.size)] ...))
-           (status-info status-reg 'bits)
+           (make-hasheq `([r.name (cons ,r.name r.size)] ...))
+           (status-info 'status-reg 'bits)
            (make-hasheq '([int-name int-value] ...))
            operations))]))
+
+(define-syntax (operations stx)
+  (syntax-parse stx
+    [(_ (name desc (arg ...) body ...) ...)
+     #'(make-hasheq `([name ,(op-info 'name 'desc (lambda (arg ...) body ...))] ...))]))
 
 (define (-> src dest)
   (set! dest src))
@@ -54,7 +61,7 @@
   ((ref reg) . -> . dest))
 
 (define (high reg)
-  (bitwise-and (arithmetic-shift reg -1) #xFF))
+  (bitwise-and (arithmetic-shift reg -8) #xFF))
 
 (define (low reg)
   (bitwise-and reg #xFF))
@@ -114,10 +121,10 @@
       (dex "IX - 1 -> IX" () ((- ix 1) . -> . ix))
       (inx "IX + 1 -> IX" () ((+ ix 1) . -> . ix))
       (jmp "Jump to ~a" (abs) (abs . -> . pc))
-      (jsr "Jump to subroutine at ~a")
-      (rts "Return from subroutine")
-      (rti "Return from interrupt")
-      (swi "Software interrupt")
+      (jsr "Jump to subroutine at ~a" () (void))
+      (rts "Return from subroutine" () (void))
+      (rti "Return from interrupt" () (void))
+      (swi "Software interrupt" () (void))
 
       ;; stack
       (des "SP - 1 -> SP" () ((- sp 1) . -> . sp))
@@ -126,47 +133,47 @@
       (pul "[SP] -> ~a" (dest) (pull! sp dest))
 
       ;; maths
-      (aba "A + B -> A")
-      (adc "~a + ~a (with carry)")
-      (add "~a + ~a (without carry)")
-      (sba "A - B -> A")
-      (sbc "~a - ~a (with carry)")
-      (sub "~a - ~a (without carry)")
-      (and "~a AND ~a")
-      (ora "~a OR ~a")
-      (eor "~a XOR ~a")
-      (asl "~a shifted left")
-      (asr "~a shifted right")
-      (lsr "~a logically shifted right")
-      (dec "~a - 1")
-      (inc "~a + 1")
-      (rol "Rotate left through carry")
-      (ror "Rotate right through carry")
-      (com "Complement ~a -> ~a")
-      (neg "Negate ~a -> ~a")
-      (daa "Decimal adjust A")
+      (aba "A + B -> A" () (void))
+      (adc "~a + ~a (with carry)" () (void))
+      (add "~a + ~a (without carry)" () (void))
+      (sba "A - B -> A" () (void))
+      (sbc "~a - ~a (with carry)" () (void))
+      (sub "~a - ~a (without carry)" () (void))
+      (and "~a AND ~a" () (void))
+      (ora "~a OR ~a" () (void))
+      (eor "~a XOR ~a" () (void))
+      (asl "~a shifted left" () (void))
+      (asr "~a shifted right" () (void))
+      (lsr "~a logically shifted right" () (void))
+      (dec "~a - 1" () (void))
+      (inc "~a + 1" () (void))
+      (rol "Rotate left through carry" () (void))
+      (ror "Rotate right through carry" () (void))
+      (com "Complement ~a -> ~a" () (void))
+      (neg "Negate ~a -> ~a" () (void))
+      (daa "Decimal adjust A" () (void))
 
       ;; status
-      (bit "A AND B -> SR")
-      (cba "A - B -> SR")
-      (cmp "~a - ~a -> SR")
-      (cpx "IX - ~a -> SR")
-      (tst "~a - 0 -> SR")
+      (bit "A AND B -> SR" () (void))
+      (cba "A - B -> SR" () (void))
+      (cmp "~a - ~a -> SR" () (void))
+      (cpx "IX - ~a -> SR" () (void))
+      (tst "~a - 0 -> SR" () (void))
 
       ;; clear
-      (clr "Clear ~a")
-      (clc "Clear carry")
-      (cli "Clear interrupt")
-      (clv "Clear overflow")
+      (clr "Clear ~a" () (void))
+      (clc "Clear carry" () (void))
+      (cli "Clear interrupt" () (void))
+      (clv "Clear overflow" () (void))
 
       ;; set
-      (sec "Set carry")
-      (sei "Set interrupt")
-      (sev "Set overflow")
+      (sec "Set carry" () (void))
+      (sei "Set interrupt" () (void))
+      (sev "Set overflow" () (void))
 
       ;; noop
-      (nop "Do nothing")
-      (wai "Wait for interrupt")
+      (nop "Do nothing" () (void))
+      (wai "Wait for interrupt" () (void))
       )))
 
 (displayln the-mpu)
