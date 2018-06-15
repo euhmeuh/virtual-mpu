@@ -7,18 +7,6 @@
   "../op-table.rkt"
   "../utils.rkt")
 
-(define a-register 0)
-(define b-register 0)
-(define index-register 0)
-(define status-register 0)
-(define pc 0)
-(define sp 0)
-
-(define irq-addr #xFFF8)
-(define soft-interrupt-addr #xFFFA)
-(define nmi-addr #xFFFC)
-(define restart-addr #xFFFE)
-
 (define current-address-decoder (make-parameter #f))
 
 (define (emulate kernel-filepath addr-decoder)
