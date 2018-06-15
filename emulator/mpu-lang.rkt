@@ -9,7 +9,6 @@
   high
   low
   ref
-  reverse-args
   arithmetic-shift-right
   (all-from-out racket/bool))
 
@@ -89,9 +88,6 @@
            (apply op.proc operands)) ...
 
          )]))
-
-(define ((reverse-args dual-arity-proc) a b)
-  (dual-arity-proc b a))
 
 (define (high reg)
   (bitwise-and (arithmetic-shift reg -8) #xFF))
