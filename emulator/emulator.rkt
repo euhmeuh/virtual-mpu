@@ -1,13 +1,20 @@
 #lang racket/base
 
 (provide
-  emulate)
+  emulate
+  memory-read
+  memory-write!
+  current-address-decoder
+  current-program-counter-accessor
+  current-program-counter-mutator)
 
 (require
   "../op-table.rkt"
   "../utils.rkt")
 
 (define current-address-decoder (make-parameter #f))
+(define current-program-counter-accessor (make-parameter #f))
+(define current-program-counter-mutator (make-parameter #f))
 
 (define (emulate kernel-filepath addr-decoder)
   (current-address-decoder addr-decoder)
@@ -28,14 +35,17 @@
 
 (define (fetch)
   ;; we read 3 bytes in advance in case we need operands
-  (define bytes (memory-read pc 3))
+  (define bytes (memory-read (pc) 3))
   (define-values (mnemonic mode)
                  (get-mnemonic (bytes-ref bytes 0)))
   (advance-pc! mnemonic mode)
   (values mnemonic mode (subbytes bytes 1)))
 
+(define (pc)
+  ((current-program-counter-accessor)))
+
 (define (advance-pc! mnemonic mode)
-  (set! pc (+ 1 pc (get-value-size mnemonic mode))))
+  ((current-program-counter-mutator) (+ 1 (pc) (get-value-size mnemonic mode))))
 
 (define (execute mnemonic mode next-bytes)
   (define operand (parse-operand mnemonic mode next-bytes))

@@ -27,7 +27,10 @@
     racket/list
     racket/syntax
     syntax/parse
-    syntax/stx))
+    syntax/stx)
+  (only-in "emulator.rkt"
+    memory-read
+    memory-write!))
 
 (struct status-info (register bits) #:transparent)
 (struct reg-info (name size) #:transparent)
@@ -123,10 +126,10 @@
   (bitwise-and reg #xFF))
 
 (define (ref addr)
-  addr)
+  (memory-read addr))
 
 (define (memory-set! addr value)
-  (void))
+  (memory-write! addr (bytes value)))
 
 (define (arithmetic-shift-right value)
   (bitwise-ior (bitwise-and value #b10000000)
@@ -144,11 +147,13 @@
 (module+ test
   (require
     racket/base
-    rackunit)
+    rackunit
+    (only-in "emulator.rkt" current-address-decoder))
 
   (define mpu% (dynamic-require "../mpus/6802.mpu" 'mpu%))
   (define the-mpu (new mpu%))
   (define memory (make-bytes 32))
+  (current-address-decoder (lambda (addr) memory))
 
   (test-case "Load data"
     (send the-mpu call 'ldaa #x08)
