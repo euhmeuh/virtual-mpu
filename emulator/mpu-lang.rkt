@@ -87,6 +87,9 @@
            (displayln (apply format op.desc operands))
            (apply op.proc operands)) ...
 
+         (define/public (reset)
+           (0 . -> . r.name) ...)
+
          )]))
 
 (define (high reg)
@@ -150,6 +153,7 @@
                   (bytes #x0A #x0B #x0C #x0D)))
 
   (test-case "Branch"
+    (send the-mpu reset)
     (send the-mpu bra 4)
     (check-equal? (get-field pc the-mpu) 4)
 
@@ -174,5 +178,10 @@
     (send the-mpu pshb)
     (check-equal? (get-field sp the-mpu) 29)
     (check-equal? (subbytes memory 30)
-                  (bytes 20 42)))
+                  (bytes 20 42))
+    (send the-mpu pula)
+    (send the-mpu pulb)
+    (check-equal? (get-field a the-mpu) 20)
+    (check-equal? (get-field b the-mpu) 42)
+    (check-equal? (get-field sp the-mpu) 31))
   )

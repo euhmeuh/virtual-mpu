@@ -9,8 +9,10 @@
       (branch (condition rel) (when condition ((+ pc rel) . -> . pc)))
       (push! (value) (value . ~> . sp)
                      ((- sp 1) . -> . sp))
-      (pull! (dest) ((+ sp 1) . -> . sp)
-                    ((ref sp) . ~> . dest)))
+      (pull-a! () ((+ sp 1) . -> . sp)
+                  ((ref sp) . -> . a))
+      (pull-b! () ((+ sp 1) . -> . sp)
+                  ((ref sp) . -> . b)))
 
     ;; branches
     (bcc "Branch if carry clear" (rel) (branch (carry?) rel))
@@ -69,8 +71,8 @@
     (ins "SP + 1 -> SP" () ((+ sp 1) . -> . sp))
     (psha "A -> [SP]" () (push! a))
     (pshb "B -> [SP]" () (push! b))
-    (pula "[SP] -> A" () (pull! a))
-    (pulb "[SP] -> B" () (pull! b))
+    (pula "[SP] -> A" () (pull-a!))
+    (pulb "[SP] -> B" () (pull-b!))
 
     ;; maths
     (aba "A + B -> A" () ((+ a b) . -> . a))
