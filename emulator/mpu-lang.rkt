@@ -14,6 +14,7 @@
   ref
   dynamic-set!
   reverse-args
+  arithmetic-shift-right
   (all-from-out racket/bool))
 
 (require
@@ -74,6 +75,10 @@
      #'(class object%
          (super-new)
          (field [r.name 0] ...
+                [bit (case-lambda [() (read-flag status-reg pos)]
+                                  [(bool) (set! status-reg (if bool
+                                                               (set-flag status-reg pos)
+                                                               (clear-flag status-reg pos)))])] ...
                 [bit? (thunk (= 0 (bitwise-and status-reg pos)))] ...
                 [registers (make-hasheq `([r.name . ,(reg-info 'r.name r.size)] ...))]
                 [status (status-info 'status-reg 'bits)]
@@ -81,10 +86,10 @@
                 [operations
                  (syntax-parameterize
                    ([-> (lambda (stx)
-                          (syntax-case stx () [(_ src dest) (if (member (syntax->datum #'dest)
+                          (syntax-case stx () [(_ val dest) (if (member (syntax->datum #'dest)
                                                                         (syntax->datum #'(r.name ...)))
-                                                                #'(set! dest src)
-                                                                #'(dynamic-set! this dest src))]))]
+                                                                #'(set! dest val)
+                                                                #'(dynamic-set! this dest val))]))]
                     [branch (syntax-rules () [(_ pc condition rel)
                                               (begin (when condition
                                                        ((+ pc rel) . -> . pc)))])]
@@ -121,13 +126,26 @@
 (define (ref reg)
   reg)
 
-(define (dynamic-set! mpu src value)
-  (if (symbol? src)
-      (dynamic-set-field! src mpu value)
-      (memory-set! src value)))
+(define (dynamic-set! mpu dest value)
+  (if (symbol? dest)
+      (dynamic-set-field! dest mpu value)
+      (memory-set! dest value)))
 
 (define (memory-set! addr value)
   (void))
+
+(define (arithmetic-shift-right value)
+  (bitwise-ior (bitwise-and value #b10000000)
+               (arithmetic-shift value -1)))
+
+(define (read-flag value flag)
+  (bitwise-and value flag))
+
+(define (set-flag value flag)
+  (bitwise-ior value flag))
+
+(define (clear-flag value flag)
+  (bitwise-and value (bitwise-not flag)))
 
 (module+ test
   (require
@@ -144,6 +162,7 @@
   (send the-mpu call 'tab)
   (send the-mpu call 'clc)
   (send the-mpu call 'aba)
+  (send the-mpu call 'asr 8)
   (send the-mpu call 'bra #x4)
   (displayln (format "A: ~a" (get-field a the-mpu)))
   (displayln (format "B: ~a" (get-field b the-mpu)))
