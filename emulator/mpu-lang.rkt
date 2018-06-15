@@ -44,7 +44,11 @@
 (begin-for-syntax
   (define-syntax-class register
     (pattern (name size))
-    (pattern name #:with size #'8)))
+    (pattern name #:with size #'8))
+
+  (define-syntax-class alias
+    (pattern (name (arg ...) body ...)
+      #:with proc #'(lambda (arg ...) body ...))))
 
 (define-syntax-parameter ->
   (lambda (stx)
@@ -77,31 +81,24 @@
      #'(class object%
          (super-new)
          (field [r.name 0] ...
-                [bit (case-lambda [() (read-flag status-reg pos)]
-                                  [(bool) (set! status-reg (if bool
-                                                               (set-flag status-reg pos)
-                                                               (clear-flag status-reg pos)))])] ...
-                [bit? (thunk (= 0 (read-flag status-reg pos)))] ...
                 [registers (make-hasheq `([r.name . ,(reg-info 'r.name r.size)] ...))]
                 [status (status-info 'status-reg 'bits)]
                 [interrupts (make-hasheq '([int-name . int-value] ...))]
                 [operations
-                 (syntax-parameterize
-                   ([-> (lambda (stx)
-                          (syntax-case stx () [(_ val dest) (if (member (syntax->datum #'dest)
-                                                                        (syntax->datum #'(r.name ...)))
-                                                                #'(set! dest val)
-                                                                #'(memory-set! dest val))]))]
-                    [branch (syntax-rules () [(_ pc condition rel)
-                                              (begin (when condition
-                                                       ((+ pc rel) . -> . pc)))])]
-                    [push! (syntax-rules () [(_ reg value)
-                                             (begin (value . -> . (ref reg))
-                                                    ((- reg 1) . -> . reg))])]
-                    [pull! (syntax-rules () [(_ reg dest)
-                                             (begin ((+ reg 1) . -> . reg)
-                                                    ((ref reg) . -> . dest))])])
-                   ops)])
+                 (let ([bit (case-lambda [() (read-flag status-reg pos)]
+                                         [(bool) (set! status-reg (if bool
+                                                                      (set-flag status-reg pos)
+                                                                      (clear-flag status-reg pos)))])] ...
+                       [bit? (thunk (not (= 0 (read-flag status-reg pos))))] ...)
+                   (syntax-parameterize
+                     ([-> (lambda (stx)
+                            (syntax-case stx ()
+                              [(_ val dest)
+                               (if (member (syntax->datum #'dest)
+                                           (syntax->datum #'(r.name ...)))
+                                   #'(set! dest val)
+                                   #'(memory-set! dest val))]))])
+                     ops))])
 
          (define/public (call op . operands)
            (define found-op (hash-ref operations op #f))
@@ -111,10 +108,12 @@
 
 (define-syntax (operations stx)
   (syntax-parse stx
-    [(_ (name desc (arg ...) body ...) ...)
-     #'(make-hasheq `([name . ,(op-info 'name
-                                        'desc
-                                        (lambda (arg ...) body ...))] ...))]))
+    #:datum-literals (aliases)
+    [(_ (aliases a:alias ...) (name desc (arg ...) body ...) ...)
+     #'(let ([a.name a.proc] ...)
+         (make-hasheq `([name . ,(op-info 'name
+                                          'desc
+                                          (lambda (arg ...) body ...))] ...)))]))
 
 (define ((reverse-args dual-arity-proc) a b)
   (dual-arity-proc b a))
@@ -126,7 +125,7 @@
   (bitwise-and reg #xFF))
 
 (define (ref addr)
-  (memory-read addr))
+  (car (bytes->list (memory-read addr))))
 
 (define (memory-set! addr value)
   (memory-write! addr (bytes value)))
@@ -156,6 +155,7 @@
   (current-address-decoder (lambda (addr) memory))
 
   (test-case "Load data"
+    (bytes-fill! memory 0)
     (send the-mpu call 'ldaa #x08)
     (send the-mpu call 'ldab #x10)
     (send the-mpu call 'lds #x04)
@@ -166,6 +166,7 @@
     (check-equal? (get-field ix the-mpu) #xA0))
 
   (test-case "Store data"
+    (bytes-fill! memory 0)
     (set-field! a the-mpu #x0A)
     (set-field! b the-mpu #x0B)
     (set-field! sp the-mpu #x0C)
@@ -176,4 +177,31 @@
     (send the-mpu call 'stx 3)
     (check-equal? (subbytes memory 0 4)
                   (bytes #x0A #x0B #x0C #x0D)))
+
+  (test-case "Branch"
+    (send the-mpu call 'bra 4)
+    (check-equal? (get-field pc the-mpu) 4)
+
+    (set-field! sr the-mpu #b00000000)
+    (send the-mpu call 'bmi -4)
+    (check-equal? (get-field pc the-mpu) 4)
+    (send the-mpu call 'bpl -4)
+    (check-equal? (get-field pc the-mpu) 0)
+
+    (set-field! sr the-mpu #b00000100)
+    (send the-mpu call 'bpl 4)
+    (check-equal? (get-field pc the-mpu) 0)
+    (send the-mpu call 'bmi 4)
+    (check-equal? (get-field pc the-mpu) 4))
+
+  (test-case "Stack"
+    (bytes-fill! memory 0)
+    (set-field! sp the-mpu 31)
+    (send the-mpu call 'ldaa 42)
+    (send the-mpu call 'psha)
+    (send the-mpu call 'ldab 20)
+    (send the-mpu call 'pshb)
+    (check-equal? (get-field sp the-mpu) 29)
+    (check-equal? (subbytes memory 30)
+                  (bytes 20 42)))
   )

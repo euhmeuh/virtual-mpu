@@ -5,32 +5,39 @@
   (interrupts [irq #xFFF8] [soft #xFFFA] [nmi #xFFFC] [restart #xFFFE])
   (operations
 
+    (aliases
+      (branch (condition rel) (when condition ((+ pc rel) . -> . pc)))
+      (push! (value) (value . -> . ((lambda () sp)))
+                     ((- sp 1) . -> . sp))
+      (pull! (dest) ((+ sp 1) . -> . sp)
+                    ((ref sp) . -> . dest)))
+
     ;; branches
-    (bcc "Branch if carry clear" (rel) (branch pc (carry?) rel))
-    (bcs "Branch if carry set" (rel) (branch pc (not (carry?)) rel))
+    (bcc "Branch if carry clear" (rel) (branch (carry?) rel))
+    (bcs "Branch if carry set" (rel) (branch (not (carry?)) rel))
 
-    (bvc "Branch if overflow clear" (rel) (branch pc (overflow?) rel))
-    (bvs "Branch if overflow set" (rel) (branch pc (not (overflow?)) rel))
+    (bvc "Branch if overflow clear" (rel) (branch (overflow?) rel))
+    (bvs "Branch if overflow set" (rel) (branch (not (overflow?)) rel))
 
-    (beq "Branch if =0" (rel) (branch pc (zero?) rel))
-    (bne "Branch if !=0" (rel) (branch pc (not (zero?)) rel))
+    (beq "Branch if =0" (rel) (branch (zero?) rel))
+    (bne "Branch if !=0" (rel) (branch (not (zero?)) rel))
 
-    (bge "Branch if >=0" (rel) (branch pc (not (xor (sign?) (overflow?))) rel))
-    (blt "Branch if <0" (rel) (branch pc (xor (sign?) (overflow?)) rel))
+    (bge "Branch if >=0" (rel) (branch (not (xor (sign?) (overflow?))) rel))
+    (blt "Branch if <0" (rel) (branch (xor (sign?) (overflow?)) rel))
 
-    (ble "Branch if <=0" (rel) (branch pc (or (zero?) (xor (sign?) (overflow?))) rel))
-    (bgt "Branch if >0" (rel) (branch pc (not (or (zero?) (xor (sign?) (overflow?)))) rel))
+    (ble "Branch if <=0" (rel) (branch (or (zero?) (xor (sign?) (overflow?))) rel))
+    (bgt "Branch if >0" (rel) (branch (not (or (zero?) (xor (sign?) (overflow?)))) rel))
 
-    (bhi "Branch if higher" (rel) (branch pc (not (or (zero?) (carry?))) rel))
-    (bls "Branch if lesser" (rel) (branch pc (or (zero?) (carry?)) rel))
+    (bhi "Branch if higher" (rel) (branch (not (or (zero?) (carry?))) rel))
+    (bls "Branch if lesser" (rel) (branch (or (zero?) (carry?)) rel))
 
-    (bmi "Branch if minus" (rel) (branch pc (sign?) rel))
-    (bpl "Branch if plus" (rel) (branch pc (not (sign?)) rel))
+    (bmi "Branch if minus to ~a" (rel) (branch (sign?) rel))
+    (bpl "Branch if plus to ~a" (rel) (branch (not (sign?)) rel))
 
-    (bra "Branch always to ~a" (rel) (branch pc #t rel))
-    (bsr "Branch always to subroutine ~a" (rel) (push! sp (low pc))
-                                                (push! sp (high pc))
-                                                (branch pc #t rel))
+    (bra "Branch always to ~a" (rel) (branch #t rel))
+    (bsr "Branch always to subroutine ~a" (rel) (push! (low pc))
+                                                (push! (high pc))
+                                                (branch #t rel))
 
     ;; moves
     (ldaa "Load A <- ~a" (val) (val . -> . a))
@@ -60,10 +67,10 @@
     ;; stack
     (des "SP - 1 -> SP" () ((- sp 1) . -> . sp))
     (ins "SP + 1 -> SP" () ((+ sp 1) . -> . sp))
-    (psha "A -> [SP]" () (push! sp a))
-    (pshb "B -> [SP]" () (push! sp b))
-    (pula "[SP] -> A" () (pull! sp a))
-    (pulb "[SP] -> B" () (pull! sp b))
+    (psha "A -> [SP]" () (push! a))
+    (pshb "B -> [SP]" () (push! b))
+    (pula "[SP] -> A" () (pull! a))
+    (pulb "[SP] -> B" () (pull! b))
 
     ;; maths
     (aba "A + B -> A" () ((+ a b) . -> . a))
