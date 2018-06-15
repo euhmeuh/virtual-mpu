@@ -6,9 +6,6 @@
   mpu
   operations
   ->
-  branch
-  push!
-  pull!
   high
   low
   ref
@@ -53,18 +50,6 @@
 (define-syntax-parameter ->
   (lambda (stx)
     (raise-syntax-error '-> "can only be used inside of mpu definition" stx)))
-
-(define-syntax-parameter branch
-  (lambda (stx)
-    (raise-syntax-error 'branch "can only be used inside of mpu definition" stx)))
-
-(define-syntax-parameter push!
-  (lambda (stx)
-    (raise-syntax-error 'push! "can only be used inside of mpu definition" stx)))
-
-(define-syntax-parameter pull!
-  (lambda (stx)
-    (raise-syntax-error 'pull! "can only be used inside of mpu definition" stx)))
 
 (define-syntax (mpu stx)
   (syntax-parse stx
