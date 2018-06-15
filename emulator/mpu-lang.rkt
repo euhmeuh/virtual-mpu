@@ -12,7 +12,6 @@
   high
   low
   ref
-  dynamic-set!
   reverse-args
   arithmetic-shift-right
   (all-from-out racket/bool))
@@ -89,7 +88,7 @@
                           (syntax-case stx () [(_ val dest) (if (member (syntax->datum #'dest)
                                                                         (syntax->datum #'(r.name ...)))
                                                                 #'(set! dest val)
-                                                                #'(dynamic-set! this dest val))]))]
+                                                                #'(memory-set! dest val))]))]
                     [branch (syntax-rules () [(_ pc condition rel)
                                               (begin (when condition
                                                        ((+ pc rel) . -> . pc)))])]
@@ -126,11 +125,6 @@
 (define (ref reg)
   reg)
 
-(define (dynamic-set! mpu dest value)
-  (if (symbol? dest)
-      (dynamic-set-field! dest mpu value)
-      (memory-set! dest value)))
-
 (define (memory-set! addr value)
   (void))
 
@@ -158,11 +152,12 @@
   (displayln (format "A: ~a" (get-field a the-mpu)))
   (displayln (format "B: ~a" (get-field b the-mpu)))
   (displayln (format "PC: ~a" (get-field pc the-mpu)))
-  (send the-mpu call 'lda 'a #x08)
+  (send the-mpu call 'ldaa #x08)
   (send the-mpu call 'tab)
   (send the-mpu call 'clc)
   (send the-mpu call 'aba)
-  (send the-mpu call 'asr 8)
+  (send the-mpu call 'asra)
+  (send the-mpu call 'asla)
   (send the-mpu call 'bra #x4)
   (displayln (format "A: ~a" (get-field a the-mpu)))
   (displayln (format "B: ~a" (get-field b the-mpu)))
