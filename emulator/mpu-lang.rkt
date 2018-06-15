@@ -78,7 +78,7 @@
                                   [(bool) (set! status-reg (if bool
                                                                (set-flag status-reg pos)
                                                                (clear-flag status-reg pos)))])] ...
-                [bit? (thunk (= 0 (bitwise-and status-reg pos)))] ...
+                [bit? (thunk (= 0 (read-flag status-reg pos)))] ...
                 [registers (make-hasheq `([r.name . ,(reg-info 'r.name r.size)] ...))]
                 [status (status-info 'status-reg 'bits)]
                 [interrupts (make-hasheq '([int-name . int-value] ...))]
@@ -122,8 +122,8 @@
 (define (low reg)
   (bitwise-and reg #xFF))
 
-(define (ref reg)
-  reg)
+(define (ref addr)
+  addr)
 
 (define (memory-set! addr value)
   (void))
@@ -148,17 +148,27 @@
 
   (define mpu% (dynamic-require "../mpus/6802.mpu" 'mpu%))
   (define the-mpu (new mpu%))
+  (define memory (make-bytes 32))
 
-  (displayln (format "A: ~a" (get-field a the-mpu)))
-  (displayln (format "B: ~a" (get-field b the-mpu)))
-  (displayln (format "PC: ~a" (get-field pc the-mpu)))
-  (send the-mpu call 'ldaa #x08)
-  (send the-mpu call 'tab)
-  (send the-mpu call 'clc)
-  (send the-mpu call 'aba)
-  (send the-mpu call 'asra)
-  (send the-mpu call 'asla)
-  (send the-mpu call 'bra #x4)
-  (displayln (format "A: ~a" (get-field a the-mpu)))
-  (displayln (format "B: ~a" (get-field b the-mpu)))
-  (displayln (format "PC: ~a" (get-field pc the-mpu))))
+  (test-case "Load data"
+    (send the-mpu call 'ldaa #x08)
+    (send the-mpu call 'ldab #x10)
+    (send the-mpu call 'lds #x04)
+    (send the-mpu call 'ldx #xA0)
+    (check-equal? (get-field a the-mpu) #x08)
+    (check-equal? (get-field b the-mpu) #x10)
+    (check-equal? (get-field sp the-mpu) #x04)
+    (check-equal? (get-field ix the-mpu) #xA0))
+
+  (test-case "Store data"
+    (set-field! a the-mpu #x0A)
+    (set-field! b the-mpu #x0B)
+    (set-field! sp the-mpu #x0C)
+    (set-field! ix the-mpu #x0D)
+    (send the-mpu call 'staa 0)
+    (send the-mpu call 'stab 1)
+    (send the-mpu call 'sts 2)
+    (send the-mpu call 'stx 3)
+    (check-equal? (subbytes memory 0 4)
+                  (bytes #x0A #x0B #x0C #x0D)))
+  )
