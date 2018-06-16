@@ -8,7 +8,9 @@
   ~>
   high
   low
+  high+low
   ref
+  wait-for-interrupt
   arithmetic-shift-right
   (all-from-out racket/bool))
 
@@ -67,6 +69,7 @@
      #'(class object%
          (super-new)
          (field [r.name 0] ...
+                [int-name int-value] ...
                 [registers (make-hasheq `([r.name . ,(reg-info 'r.name r.size)] ...))]
                 [status (status-info 'status-reg 'bits)]
                 [interrupts (make-hasheq '([int-name . int-value] ...))]
@@ -98,8 +101,14 @@
 (define (low reg)
   (bitwise-and reg #xFF))
 
+(define (high+low high low)
+  (bitwise-ior (arithmetic-shift high 8) low))
+
 (define (ref addr)
   (car (bytes->list (memory-read addr))))
+
+(define (wait-for-interrupt)
+  (void))
 
 (define (memory-set! addr value)
   (memory-write! addr (bytes value)))
@@ -128,7 +137,7 @@
   (define memory (make-bytes 32))
   (current-address-decoder (lambda (addr) memory))
 
-  (test-case "Load data"
+  (test-case "Load immediate data"
     (bytes-fill! memory 0)
     (send the-mpu ldaa #x08)
     (send the-mpu ldab #x10)
@@ -138,6 +147,17 @@
     (check-equal? (get-field b the-mpu) #x10)
     (check-equal? (get-field sp the-mpu) #x04)
     (check-equal? (get-field ix the-mpu) #xA0))
+
+  (test-case "Load relative data"
+    (bytes-copy! memory 0 (bytes #x02 #x03 #x05 #x08))
+    (send the-mpu ldaa (ref 0))
+    (send the-mpu ldab (ref 1))
+    (send the-mpu lds (ref 2))
+    (send the-mpu ldx (ref 3))
+    (check-equal? (get-field a the-mpu) #x02)
+    (check-equal? (get-field b the-mpu) #x03)
+    (check-equal? (get-field sp the-mpu) #x05)
+    (check-equal? (get-field ix the-mpu) #x08))
 
   (test-case "Store data"
     (bytes-fill! memory 0)
