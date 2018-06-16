@@ -2,7 +2,7 @@
 (mpu "6802"
   (registers (a b sr [ix 16] [sp 16] [pc 16]))
   (status sr (carry zero sign overflow interrupt half))
-  (interrupts [irq #xFFF8] [soft #xFFFA] [nmi #xFFFC] [restart #xFFFE])
+  (interrupts interrupt [irq #xFFF8] [soft #xFFFA] [nmi #xFFFC] [restart #xFFFE])
   (operations
 
     (aliases
@@ -128,10 +128,12 @@
     (com "Complement ~a" () (void))
     (coma "Complement A" () (void))
     (comb "Complement B" () (void))
-    (neg "Negate ~a" () (void))
-    (nega "Negate A" () (void))
-    (negb "Negate B" () (void))
-    (daa "Decimal adjust A" () (void))
+    (neg "Negate ~a" (addr) ((- 0 (ref addr)) . ~> . addr))
+    (nega "Negate A" () ((- 0 a) . -> . a))
+    (negb "Negate B" () ((- 0 b) . -> . b))
+    (daa "Decimal adjust A" () ((+ a (nib+nib
+                                       (if (>= (nib-high a) 10) 6 0)
+                                       (if (>= (nib-low a) 10) 6 0))) . -> . a))
 
     ;; status
     (bita "A AND ~a -> SR" (val) (void))

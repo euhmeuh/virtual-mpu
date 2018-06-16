@@ -9,6 +9,9 @@
   high
   low
   high+low
+  nib-high
+  nib-low
+  nib+nib
   ref
   wait-for-interrupt
   arithmetic-shift-right
@@ -30,8 +33,9 @@
     memory-read
     memory-write!))
 
-(struct status-info (register bits) #:transparent)
 (struct reg-info (name size) #:transparent)
+(struct status-info (register bits) #:transparent)
+(struct interrupts-info (bit interrupts) #:transparent)
 
 (define-syntax-rule (module-begin expr)
   (#%module-begin
@@ -59,7 +63,7 @@
     #:datum-literals (registers status interrupts aliases)
     [(_ name (registers (r:register ...))
              (status status-reg (bit ...))
-             (interrupts [int-name int-value] ...)
+             (interrupts interrupt-bit [int-name int-value] ...)
              (operations (aliases a:alias ...) op:operation ...))
      #:with bits #'(bit ...)
      #:with ((bit? pos) ...) (stx-map (lambda (id)
@@ -72,7 +76,7 @@
                 [int-name int-value] ...
                 [registers (make-hasheq `([r.name . ,(reg-info 'r.name r.size)] ...))]
                 [status (status-info 'status-reg 'bits)]
-                [interrupts (make-hasheq '([int-name . int-value] ...))]
+                [interrupts (interrupts-info 'interrupt-bit (make-hasheq '([int-name . int-value] ...)))]
                 [operations (make-hasheq '([op.name . op.desc] ...))])
 
          (define/public bit
@@ -95,14 +99,23 @@
 
          )]))
 
-(define (high reg)
-  (bitwise-and (arithmetic-shift reg -8) #xFF))
+(define (high val)
+  (bitwise-and (arithmetic-shift val -8) #xFF))
 
-(define (low reg)
-  (bitwise-and reg #xFF))
+(define (low val)
+  (bitwise-and val #xFF))
+
+(define (nib-high val)
+  (bitwise-and (arithmetic-shift val -4) #x0F))
+
+(define (nib-low val)
+  (bitwise-and val #x0F))
 
 (define (high+low high low)
   (bitwise-ior (arithmetic-shift high 8) low))
+
+(define (nib+nib high low)
+  (bitwise-ior (arithmetic-shift high 4) low))
 
 (define (ref addr)
   (car (bytes->list (memory-read addr))))
