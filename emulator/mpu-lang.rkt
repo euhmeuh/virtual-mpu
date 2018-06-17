@@ -6,15 +6,22 @@
   mpu
   ->
   ~>
+  ref
+  wait-for-interrupt
+  ;; binary operations
   high
   low
   high+low
   nib-high
   nib-low
   nib+nib
-  ref
-  wait-for-interrupt
+  16bit+
+  8bit+
+  4bit+
+  8bit-
+  shift-left
   arithmetic-shift-right
+  logical-shift-right
   (all-from-out racket/bool))
 
 (require
@@ -31,7 +38,8 @@
     syntax/stx)
   (only-in "emulator.rkt"
     memory-read
-    memory-write!))
+    memory-write!)
+  "../utils.rkt")
 
 (struct reg-info (name size) #:transparent)
 (struct status-info (register bits) #:transparent)
@@ -99,24 +107,6 @@
 
          )]))
 
-(define (high val)
-  (bitwise-and (arithmetic-shift val -8) #xFF))
-
-(define (low val)
-  (bitwise-and val #xFF))
-
-(define (nib-high val)
-  (bitwise-and (arithmetic-shift val -4) #x0F))
-
-(define (nib-low val)
-  (bitwise-and val #x0F))
-
-(define (high+low high low)
-  (bitwise-ior (arithmetic-shift high 8) low))
-
-(define (nib+nib high low)
-  (bitwise-ior (arithmetic-shift high 4) low))
-
 (define (ref addr)
   (car (bytes->list (memory-read addr))))
 
@@ -125,10 +115,6 @@
 
 (define (memory-set! addr value)
   (memory-write! addr (bytes value)))
-
-(define (arithmetic-shift-right value)
-  (bitwise-ior (bitwise-and value #b10000000)
-               (arithmetic-shift value -1)))
 
 (define (read-flag value flag)
   (bitwise-and value flag))
