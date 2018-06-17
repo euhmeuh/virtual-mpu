@@ -9,6 +9,8 @@
   ref
   wait-for-interrupt
   ;; binary operations
+  neg
+  16neg
   high
   low
   high+low
@@ -16,9 +18,10 @@
   nib-low
   nib+nib
   16bit+
+  16bit-
   8bit+
-  4bit+
   8bit-
+  4bit+
   shift-left
   arithmetic-shift-right
   logical-shift-right
@@ -128,7 +131,9 @@
 (module+ test
   (require
     racket/base
+    racket/format
     rackunit
+    rackunit/text-ui
     (only-in "emulator.rkt" current-address-decoder))
 
   (define mpu% (dynamic-require "../mpus/6802.mpu" 'mpu%))
@@ -136,71 +141,101 @@
   (define memory (make-bytes 32))
   (current-address-decoder (lambda (addr) memory))
 
-  (test-case "Load immediate data"
+  (define (reset)
     (bytes-fill! memory 0)
-    (send the-mpu ldaa #x08)
-    (send the-mpu ldab #x10)
-    (send the-mpu lds #x04)
-    (send the-mpu ldx #xA0)
-    (check-equal? (get-field a the-mpu) #x08)
-    (check-equal? (get-field b the-mpu) #x10)
-    (check-equal? (get-field sp the-mpu) #x04)
-    (check-equal? (get-field ix the-mpu) #xA0))
+    (send the-mpu reset))
 
-  (test-case "Load relative data"
-    (bytes-copy! memory 0 (bytes #x02 #x03 #x05 #x08))
-    (send the-mpu ldaa (ref 0))
-    (send the-mpu ldab (ref 1))
-    (send the-mpu lds (ref 2))
-    (send the-mpu ldx (ref 3))
-    (check-equal? (get-field a the-mpu) #x02)
-    (check-equal? (get-field b the-mpu) #x03)
-    (check-equal? (get-field sp the-mpu) #x05)
-    (check-equal? (get-field ix the-mpu) #x08))
+  (define-test-suite mpu-instructions
 
-  (test-case "Store data"
-    (bytes-fill! memory 0)
-    (set-field! a the-mpu #x0A)
-    (set-field! b the-mpu #x0B)
-    (set-field! sp the-mpu #x0C)
-    (set-field! ix the-mpu #x0D)
-    (send the-mpu staa 0)
-    (send the-mpu stab 1)
-    (send the-mpu sts 2)
-    (send the-mpu stx 3)
-    (check-equal? (subbytes memory 0 4)
-                  (bytes #x0A #x0B #x0C #x0D)))
+    (test-case "Load immediate data"
+      (reset)
+      (send the-mpu ldaa #x08)
+      (send the-mpu ldab #x10)
+      (send the-mpu lds #x04)
+      (send the-mpu ldx #xA0)
+      (check-equal? (get-field a the-mpu) #x08)
+      (check-equal? (get-field b the-mpu) #x10)
+      (check-equal? (get-field sp the-mpu) #x04)
+      (check-equal? (get-field ix the-mpu) #xA0))
 
-  (test-case "Branch"
-    (send the-mpu reset)
-    (send the-mpu bra 4)
-    (check-equal? (get-field pc the-mpu) 4)
+    (test-case "Load relative data"
+      (reset)
+      (bytes-copy! memory 0 (bytes #x02 #x03 #x05 #x08))
+      (send the-mpu ldaa (ref 0))
+      (send the-mpu ldab (ref 1))
+      (send the-mpu lds (ref 2))
+      (send the-mpu ldx (ref 3))
+      (check-equal? (get-field a the-mpu) #x02)
+      (check-equal? (get-field b the-mpu) #x03)
+      (check-equal? (get-field sp the-mpu) #x05)
+      (check-equal? (get-field ix the-mpu) #x08))
 
-    (send the-mpu sign #f)
-    (send the-mpu bmi -4)
-    (check-equal? (get-field pc the-mpu) 4)
-    (send the-mpu bpl -4)
-    (check-equal? (get-field pc the-mpu) 0)
+    (test-case "Store data"
+      (reset)
+      (set-field! a the-mpu #x0A)
+      (set-field! b the-mpu #x0B)
+      (set-field! sp the-mpu #x0C)
+      (set-field! ix the-mpu #x0D)
+      (send the-mpu staa 0)
+      (send the-mpu stab 1)
+      (send the-mpu sts 2)
+      (send the-mpu stx 3)
+      (check-equal? (subbytes memory 0 4)
+                    (bytes #x0A #x0B #x0C #x0D)))
 
-    (send the-mpu sign #t)
-    (send the-mpu bpl 4)
-    (check-equal? (get-field pc the-mpu) 0)
-    (send the-mpu bmi 4)
-    (check-equal? (get-field pc the-mpu) 4))
+    (test-case "Branch"
+      (reset)
+      (send the-mpu bra 4)
+      (check-equal? (get-field pc the-mpu) 4)
 
-  (test-case "Stack"
-    (bytes-fill! memory 0)
-    (set-field! sp the-mpu 31)
-    (send the-mpu ldaa 42)
-    (send the-mpu psha)
-    (send the-mpu ldab 20)
-    (send the-mpu pshb)
-    (check-equal? (get-field sp the-mpu) 29)
-    (check-equal? (subbytes memory 30)
-                  (bytes 20 42))
-    (send the-mpu pula)
-    (send the-mpu pulb)
-    (check-equal? (get-field a the-mpu) 20)
-    (check-equal? (get-field b the-mpu) 42)
-    (check-equal? (get-field sp the-mpu) 31))
-  )
+      (send the-mpu sign #f)
+      (send the-mpu bmi -4)
+      (check-equal? (get-field pc the-mpu) 4)
+      (send the-mpu bpl -4)
+      (check-equal? (get-field pc the-mpu) 0)
+
+      (send the-mpu sign #t)
+      (send the-mpu bpl 4)
+      (check-equal? (get-field pc the-mpu) 0)
+      (send the-mpu bmi 4)
+      (check-equal? (get-field pc the-mpu) 4))
+
+    (test-case "Stack"
+      (reset)
+      (set-field! sp the-mpu 31)
+      (send the-mpu ldaa 42)
+      (send the-mpu psha)
+      (send the-mpu ldab 20)
+      (send the-mpu pshb)
+      (check-equal? (get-field sp the-mpu) 29)
+      (check-equal? (subbytes memory 30)
+                    (bytes 20 42))
+      (send the-mpu pula)
+      (send the-mpu pulb)
+      (check-equal? (get-field a the-mpu) 20)
+      (check-equal? (get-field b the-mpu) 42)
+      (check-equal? (get-field sp the-mpu) 31)
+      (send the-mpu des)
+      (check-equal? (get-field sp the-mpu) 30)
+      (send the-mpu ins)
+      (check-equal? (get-field sp the-mpu) 31))
+
+    (test-case "Simple addition"
+      (reset)
+      (send the-mpu ldaa #x28)
+      (send the-mpu ldab #x14)
+      (send the-mpu aba)
+      (check-equal? (get-field a the-mpu) #x3C))
+
+    (test-case "Overflow addition"
+      (reset)
+      (send the-mpu ldaa 127)
+      (send the-mpu adda 127)
+      (check-equal? (get-field a the-mpu) 254)
+      (check-false (send the-mpu carry?))
+      (check-false (send the-mpu zero?))
+      (check-true (send the-mpu sign?))
+      (check-true (send the-mpu overflow?))
+      (check-true (send the-mpu half?))))
+
+  (run-tests mpu-instructions))

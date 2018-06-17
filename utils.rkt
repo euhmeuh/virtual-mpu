@@ -9,6 +9,8 @@
   split-into-bytes
   number->7bit-signed
   7bit-signed->number
+  neg
+  16neg
   high
   low
   nib-high
@@ -16,9 +18,10 @@
   high+low
   nib+nib
   16bit+
+  16bit-
   8bit+
-  4bit+
   8bit-
+  4bit+
   shift-left
   arithmetic-shift-right
   logical-shift-right)
@@ -76,6 +79,12 @@
 (define (7bit-signed->number value)
   (if (> value 127) (- value 256) value))
 
+(define (neg val)
+  (bitwise-xor #xFF (8bit+ val #xFF)))
+
+(define (16neg val)
+  (bitwise-xor #xFFFF (8bit+ val #xFFFF)))
+
 (define (high val)
   (bitwise-and (arithmetic-shift val -8) #xFF))
 
@@ -100,9 +109,11 @@
 
 (define (8bit- . values)
   (apply 8bit+ (cons (car values)
-                     (map (lambda (n)
-                            (number->7bit-signed (- n)))
-                          (cdr values)))))
+                     (map neg (cdr values)))))
+
+(define (16bit- . values)
+  (apply 16bit+ (cons (car values)
+                      (map 16neg (cdr values)))))
 
 (define/rollover 256 (shift-left value)
   (arithmetic-shift value 1))
