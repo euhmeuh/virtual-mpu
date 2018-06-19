@@ -161,112 +161,110 @@
         (for/list ([status-bit (status-info-bits (get-field status the-mpu))])
           (memq status-bit '(bit ...))))))
 
-  (define-test-suite mpu-instructions
+  (test-case "Load immediate data"
+    (reset)
+    (send the-mpu ldaa #x08)
+    (send the-mpu ldab #x10)
+    (send the-mpu lds #x04)
+    (send the-mpu ldx #xA0)
+    (check-field-equal? a #x08)
+    (check-field-equal? b #x10)
+    (check-field-equal? sp #x04)
+    (check-field-equal? ix #xA0))
 
-    (test-case "Load immediate data"
-      (reset)
-      (send the-mpu ldaa #x08)
-      (send the-mpu ldab #x10)
-      (send the-mpu lds #x04)
-      (send the-mpu ldx #xA0)
-      (check-field-equal? a #x08)
-      (check-field-equal? b #x10)
-      (check-field-equal? sp #x04)
-      (check-field-equal? ix #xA0))
+  (test-case "Load relative data"
+    (reset)
+    (bytes-copy! memory 0 (bytes #x02 #x03 #x05 #x08))
+    (send the-mpu ldaa (ref 0))
+    (send the-mpu ldab (ref 1))
+    (send the-mpu lds (ref 2))
+    (send the-mpu ldx (ref 3))
+    (check-field-equal? a #x02)
+    (check-field-equal? b #x03)
+    (check-field-equal? sp #x05)
+    (check-field-equal? ix #x08))
 
-    (test-case "Load relative data"
-      (reset)
-      (bytes-copy! memory 0 (bytes #x02 #x03 #x05 #x08))
-      (send the-mpu ldaa (ref 0))
-      (send the-mpu ldab (ref 1))
-      (send the-mpu lds (ref 2))
-      (send the-mpu ldx (ref 3))
-      (check-field-equal? a #x02)
-      (check-field-equal? b #x03)
-      (check-field-equal? sp #x05)
-      (check-field-equal? ix #x08))
+  (test-case "Store data"
+    (reset)
+    (set-field! a the-mpu #x0A)
+    (set-field! b the-mpu #x0B)
+    (set-field! sp the-mpu #x0C)
+    (set-field! ix the-mpu #x0D)
+    (send the-mpu staa 0)
+    (send the-mpu stab 1)
+    (send the-mpu sts 2)
+    (send the-mpu stx 3)
+    (check-equal? (subbytes memory 0 4)
+                  (bytes #x0A #x0B #x0C #x0D)))
 
-    (test-case "Store data"
-      (reset)
-      (set-field! a the-mpu #x0A)
-      (set-field! b the-mpu #x0B)
-      (set-field! sp the-mpu #x0C)
-      (set-field! ix the-mpu #x0D)
-      (send the-mpu staa 0)
-      (send the-mpu stab 1)
-      (send the-mpu sts 2)
-      (send the-mpu stx 3)
-      (check-equal? (subbytes memory 0 4)
-                    (bytes #x0A #x0B #x0C #x0D)))
+  (test-case "Branch"
+    (reset)
+    (send the-mpu bra 4)
+    (check-field-equal? pc 4)
 
-    (test-case "Branch"
-      (reset)
-      (send the-mpu bra 4)
-      (check-field-equal? pc 4)
+    (send the-mpu sign #f)
+    (send the-mpu bmi -4)
+    (check-field-equal? pc 4)
+    (send the-mpu bpl -4)
+    (check-field-equal? pc 0)
 
-      (send the-mpu sign #f)
-      (send the-mpu bmi -4)
-      (check-field-equal? pc 4)
-      (send the-mpu bpl -4)
-      (check-field-equal? pc 0)
+    (send the-mpu sign #t)
+    (send the-mpu bpl 4)
+    (check-field-equal? pc 0)
+    (send the-mpu bmi 4)
+    (check-field-equal? pc 4))
 
-      (send the-mpu sign #t)
-      (send the-mpu bpl 4)
-      (check-field-equal? pc 0)
-      (send the-mpu bmi 4)
-      (check-field-equal? pc 4))
+  (test-case "Stack"
+    (reset)
+    (set-field! sp the-mpu 31)
+    (send the-mpu ldaa 42)
+    (send the-mpu psha)
+    (send the-mpu ldab 20)
+    (send the-mpu pshb)
+    (check-field-equal? sp 29)
+    (check-equal? (subbytes memory 30)
+                  (bytes 20 42))
+    (send the-mpu pula)
+    (send the-mpu pulb)
+    (check-field-equal? a 20)
+    (check-field-equal? b 42)
+    (check-field-equal? sp 31)
+    (send the-mpu des)
+    (check-field-equal? sp 30)
+    (send the-mpu ins)
+    (check-field-equal? sp 31))
 
-    (test-case "Stack"
-      (reset)
-      (set-field! sp the-mpu 31)
-      (send the-mpu ldaa 42)
-      (send the-mpu psha)
-      (send the-mpu ldab 20)
-      (send the-mpu pshb)
-      (check-field-equal? sp 29)
-      (check-equal? (subbytes memory 30)
-                    (bytes 20 42))
-      (send the-mpu pula)
-      (send the-mpu pulb)
-      (check-field-equal? a 20)
-      (check-field-equal? b 42)
-      (check-field-equal? sp 31)
-      (send the-mpu des)
-      (check-field-equal? sp 30)
-      (send the-mpu ins)
-      (check-field-equal? sp 31))
+  (test-case "Simple additions"
+    (reset)
+    (send the-mpu ldaa #x28)
+    (send the-mpu ldab #x14)
+    (send the-mpu aba)
+    (check-field-equal? a #x3C)
+    (check-status?)
 
-    (test-case "Simple additions"
-      (reset)
-      (send the-mpu ldaa #x28)
-      (send the-mpu ldab #x14)
-      (send the-mpu aba)
-      (check-field-equal? a #x3C)
-      (check-status?)
+    (send the-mpu adca #xFF) ;; equivalent to -1
+    (check-field-equal? a #x3B)
+    (check-status? carry half)
 
-      (send the-mpu adca #xFF) ;; equivalent to -1
-      (check-field-equal? a #x3B)
-      (check-status? carry half)
+    (send the-mpu adcb 1) ;; with carry should be +2
+    (check-field-equal? b #x16)
+    (check-status?)
 
-      (send the-mpu adcb 1) ;; with carry should be +2
-      (check-field-equal? b #x16)
-      (check-status?)
+    (send the-mpu carry #t) ;; force carry
+    (send the-mpu adda 1) ;; should not be concerned with carry
+    (check-field-equal? a #x3C)
+    (check-status?)
 
-      (send the-mpu carry #t) ;; force carry
-      (send the-mpu adda 1) ;; should not be concerned with carry
-      (check-field-equal? a #x3C)
-      (check-status?)
+    (send the-mpu carry #t) ;; force carry
+    (send the-mpu addb 1) ;; should not be concerned with carry
+    (check-field-equal? b #x17)
+    (check-status?))
 
-      (send the-mpu carry #t) ;; force carry
-      (send the-mpu addb 1) ;; should not be concerned with carry
-      (check-field-equal? b #x17)
-      (check-status?))
+  (test-case "Overflow addition"
+    (reset)
+    (send the-mpu ldaa 127)
+    (send the-mpu adda 127)
+    (check-field-equal? a 254)
+    (check-status? sign overflow half))
 
-    (test-case "Overflow addition"
-      (reset)
-      (send the-mpu ldaa 127)
-      (send the-mpu adda 127)
-      (check-field-equal? a 254)
-      (check-status? sign overflow half)))
-
-  (run-tests mpu-instructions))
+  )
