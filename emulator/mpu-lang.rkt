@@ -6,6 +6,7 @@
   mpu
   ->
   ~>
+  with
   ref
   wait-for-interrupt
   ;; binary operations
@@ -68,6 +69,9 @@
 
 (define-syntax-rule (-> val dest) (set! dest val))
 (define-syntax-rule (~> val dest) (memory-set! dest val))
+
+(define-syntax-rule (with id value body ...)
+  (let ([id value]) body ...))
 
 (define-syntax (mpu stx)
   (syntax-parse stx
@@ -234,33 +238,57 @@
     (send the-mpu ins)
     (check-field-equal? sp 31))
 
-  (test-case "Simple additions"
+  (test-case "Simple addition"
     (reset)
     (send the-mpu ldaa #x28)
     (send the-mpu ldab #x14)
     (send the-mpu aba)
     (check-field-equal? a #x3C)
-    (check-status?)
-
-    (send the-mpu adca #xFF) ;; equivalent to -1
-    (check-field-equal? a #x3B)
-    (check-status? carry half)
-
-    (send the-mpu adcb 1) ;; with carry should be +2
-    (check-field-equal? b #x16)
-    (check-status?)
-
-    (send the-mpu carry #t) ;; force carry
-    (send the-mpu adda 1) ;; should not be concerned with carry
-    (check-field-equal? a #x3C)
-    (check-status?)
-
-    (send the-mpu carry #t) ;; force carry
-    (send the-mpu addb 1) ;; should not be concerned with carry
-    (check-field-equal? b #x17)
     (check-status?))
 
-  (test-case "Overflow addition"
+  (test-case "Addition rolls over"
+    (reset)
+    (set-field! a the-mpu #x7A)
+    (send the-mpu adca #xFF) ;; equivalent to -1
+    (check-field-equal? a #x79)
+    (check-status? carry half))
+
+  (test-case "Addition rolls over and become negative"
+    (reset)
+    (set-field! a the-mpu #xAA)
+    (send the-mpu adca #xFF) ;; equivalent to -1
+    (check-field-equal? a #xA9)
+    (check-status? carry sign half))
+
+  (test-case "Addition with carry"
+    (reset)
+    (set-field! b the-mpu #x14)
+    (send the-mpu carry #t)
+    (send the-mpu adcb 1) ;; with carry should be +2
+    (check-field-equal? b #x16)
+    (check-status?))
+
+  (test-case "Additions without carry"
+    (reset)
+    (set-field! a the-mpu #x14)
+    (set-field! b the-mpu #x24)
+    (send the-mpu carry #t)
+    (send the-mpu adda 1) ;; should not be concerned with carry
+    (check-field-equal? a #x15)
+    (check-status?)
+
+    (send the-mpu carry #t)
+    (send the-mpu addb 1) ;; should not be concerned with carry
+    (check-field-equal? b #x25)
+    (check-status?))
+
+  (test-case "Addition generates half-carry"
+    (reset)
+    (send the-mpu ldab #x0F)
+    (send the-mpu addb 1)
+    (check-status? half))
+
+  (test-case "Addition generates overflow"
     (reset)
     (send the-mpu ldaa 127)
     (send the-mpu adda 127)
