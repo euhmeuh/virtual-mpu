@@ -1,25 +1,57 @@
 #lang s-exp "../emulator/mpu-lang.rkt"
 (mpu "6802"
   (registers (a b sr [ix 16] [sp 16] [pc 16]))
-  (status sr (carry zero sign overflow interrupt half))
+  (status sr (carry overflow zero sign interrupt half))
   (interrupts interrupt [irq #xFFF8] [soft #xFFFA] [nmi #xFFFC] [restart #xFFFE])
   (operations
 
     (aliases
-      (branch (condition rel) (when condition ((+ pc rel) . -> . pc)))
-      (push! (value) (value . ~> . sp)
-                     ((- sp 1) . -> . sp))
-      (pull! () ((+ sp 1) . -> . sp)
-                (ref sp))
-      (go-to-interrupt (int) ((high+low (ref int) (ref (+ 1 int))) . -> . pc))
-      (carry! (x y [c 0]) (carry (> (+ x y c) 255)))
-      (borrow! (x y [c 0]) (< (- x y c) 0))
-      (half-carry! (x y [c 0]) (half (> (+ (nib-low x) (nib-low y) c) 15)))
-      (overflow! (x y [c 0]) (overflow (xor (> (+ (bitwise-and x #b01111111)
-                                                  (bitwise-and y #b01111111) c) 127)
-                                            (> (+ x y c) 255))))
-      (zero! (result) (zero (= 0 result)))
-      (sign! (result) (sign (not (= 0 (bitwise-and result #b10000000))))))
+      (branch (condition rel)
+        (when condition ((+ pc rel) . -> . pc)))
+
+      (push! (value)
+        (value . ~> . sp)
+        ((- sp 1) . -> . sp))
+
+      (pull! ()
+        ((+ sp 1) . -> . sp)
+        (ref sp))
+
+      (go-to-interrupt (int)
+        ((high+low (ref int) (ref (+ 1 int))) . -> . pc))
+
+      (carry! (x y [c 0])
+        (carry (> (+ x y c) 255)))
+
+      (borrow! (x y [c 0])
+        (carry (< (- x y c) 0)))
+
+      (half-carry! (x y [c 0])
+        (half (> (+ (nib-low x) (nib-low y) c) 15)))
+
+      (overflow! (x y [c 0])
+        (overflow (xor (> (+ (bitwise-and x #b01111111)
+                             (bitwise-and y #b01111111) c) 127)
+                       (> (+ x y c) 255))))
+
+      (zero! (result)
+        (zero (= 0 result)))
+
+      (sign! (result)
+        (sign (not (= 0 (bitwise-and result #b10000000)))))
+
+      (addition! (x y c result)
+        (carry! x y c)
+        (half-carry! x y c)
+        (overflow! x y c)
+        (zero! result)
+        (sign! result))
+
+      (substraction! (x y c result)
+        (borrow! x y c)
+        (overflow! x y c)
+        (zero! result)
+        (sign! result)))
 
     ;; branches
     (bcc "Branch if carry clear" (rel) (branch (carry?) rel))
@@ -96,22 +128,45 @@
     (pulb "[SP] -> B" () ((pull!) . -> . b))
 
     ;; maths
-    (aba "A + B -> A" () ((8bit+ a b) . -> . a))
-    (sba "A - B -> A" () ((8bit- a b) . -> . a))
-    (adca "A + ~a + carry -> A" (val) ((8bit+ a val (carry)) . -> . a))
-    (adcb "B + ~a + carry -> B" (val) ((8bit+ b val (carry)) . -> . b))
-    (sbca "A - ~a - carry -> A" (val) ((8bit- a val (carry)) . -> . a))
-    (sbcb "B - ~a - carry -> B" (val) ((8bit- b val (carry)) . -> . b))
-    (adda "A + ~a -> A (no carry)" (val) (let ([result (8bit+ a val)])
-                                           (carry! a val)
-                                           (overflow! a val)
-                                           (zero! result)
-                                           (sign! result)
-                                           (half-carry! a val)
-                                           (result . -> . a)))
-    (addb "B + ~a -> B (no carry)" (val) ((8bit+ b val) . -> . b))
-    (suba "A - ~a -> A (no carry)" (val) ((8bit- a val) . -> . a))
-    (subb "B - ~a -> B (no carry)" (val) ((8bit- b val) . -> . b))
+    (aba "A + B -> A" () (let ([r (8bit+ a b)])
+                           (addition! a b 0 r)
+                           (r . -> . a)))
+
+    (adca "A + ~a + carry -> A" (val) (let ([r (8bit+ a val (carry))])
+                                        (addition! a val (carry) r)
+                                        (r . -> . a)))
+
+    (adcb "B + ~a + carry -> B" (val) (let ([r (8bit+ b val (carry))])
+                                        (addition! b val (carry) r)
+                                        (r . -> . b)))
+
+    (adda "A + ~a -> A (no carry)" (val) (let ([r (8bit+ a val)])
+                                           (addition! a val 0 r)
+                                           (r . -> . a)))
+
+    (addb "B + ~a -> B (no carry)" (val) (let ([r (8bit+ b val)])
+                                           (addition! b val 0 r)
+                                           (r . -> . b)))
+
+    (sba "A - B -> A" () (let ([r (8bit- a b)])
+                           (substraction! a b 0 r)
+                           (r . -> . a)))
+
+    (sbca "A - ~a - carry -> A" (val) (let ([r (8bit- a val (carry))])
+                                        (substraction! a val (carry) r)
+                                        (r . -> . a)))
+
+    (sbcb "B - ~a - carry -> B" (val) (let ([r (8bit- b val (carry))])
+                                        (substraction! b val (carry) r)
+                                        (r . -> . b)))
+
+    (suba "A - ~a -> A (no carry)" (val) (let ([r (8bit- a val)])
+                                           (substraction! a val 0 r)
+                                           (r . -> . a)))
+
+    (subb "B - ~a -> B (no carry)" (val) (let ([r (8bit- b val)])
+                                           (substraction! b val 0 r)
+                                           (r . -> . b)))
 
     (anda "A AND ~a -> A" (val) ((bitwise-and a val) . -> . a))
     (andb "B AND ~a -> B" (val) ((bitwise-and b val) . -> . b))

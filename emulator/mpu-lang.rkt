@@ -145,6 +145,22 @@
     (bytes-fill! memory 0)
     (send the-mpu reset))
 
+  (define (boolean-bits->number values)
+    (for/fold ([bin-num #b0])
+              ([value values] [i (in-naturals)])
+      (if value
+          (bitwise-ior bin-num (expt 2 i))
+          bin-num)))
+
+  (define-syntax-rule (check-field-equal? field value)
+    (check-equal? (get-field field the-mpu) value))
+
+  (define-syntax-rule (check-status? bit ...)
+    (check-field-equal? sr
+      (boolean-bits->number
+        (for/list ([status-bit (status-info-bits (get-field status the-mpu))])
+          (memq status-bit '(bit ...))))))
+
   (define-test-suite mpu-instructions
 
     (test-case "Load immediate data"
@@ -153,10 +169,10 @@
       (send the-mpu ldab #x10)
       (send the-mpu lds #x04)
       (send the-mpu ldx #xA0)
-      (check-equal? (get-field a the-mpu) #x08)
-      (check-equal? (get-field b the-mpu) #x10)
-      (check-equal? (get-field sp the-mpu) #x04)
-      (check-equal? (get-field ix the-mpu) #xA0))
+      (check-field-equal? a #x08)
+      (check-field-equal? b #x10)
+      (check-field-equal? sp #x04)
+      (check-field-equal? ix #xA0))
 
     (test-case "Load relative data"
       (reset)
@@ -165,10 +181,10 @@
       (send the-mpu ldab (ref 1))
       (send the-mpu lds (ref 2))
       (send the-mpu ldx (ref 3))
-      (check-equal? (get-field a the-mpu) #x02)
-      (check-equal? (get-field b the-mpu) #x03)
-      (check-equal? (get-field sp the-mpu) #x05)
-      (check-equal? (get-field ix the-mpu) #x08))
+      (check-field-equal? a #x02)
+      (check-field-equal? b #x03)
+      (check-field-equal? sp #x05)
+      (check-field-equal? ix #x08))
 
     (test-case "Store data"
       (reset)
@@ -186,19 +202,19 @@
     (test-case "Branch"
       (reset)
       (send the-mpu bra 4)
-      (check-equal? (get-field pc the-mpu) 4)
+      (check-field-equal? pc 4)
 
       (send the-mpu sign #f)
       (send the-mpu bmi -4)
-      (check-equal? (get-field pc the-mpu) 4)
+      (check-field-equal? pc 4)
       (send the-mpu bpl -4)
-      (check-equal? (get-field pc the-mpu) 0)
+      (check-field-equal? pc 0)
 
       (send the-mpu sign #t)
       (send the-mpu bpl 4)
-      (check-equal? (get-field pc the-mpu) 0)
+      (check-field-equal? pc 0)
       (send the-mpu bmi 4)
-      (check-equal? (get-field pc the-mpu) 4))
+      (check-field-equal? pc 4))
 
     (test-case "Stack"
       (reset)
@@ -207,35 +223,50 @@
       (send the-mpu psha)
       (send the-mpu ldab 20)
       (send the-mpu pshb)
-      (check-equal? (get-field sp the-mpu) 29)
+      (check-field-equal? sp 29)
       (check-equal? (subbytes memory 30)
                     (bytes 20 42))
       (send the-mpu pula)
       (send the-mpu pulb)
-      (check-equal? (get-field a the-mpu) 20)
-      (check-equal? (get-field b the-mpu) 42)
-      (check-equal? (get-field sp the-mpu) 31)
+      (check-field-equal? a 20)
+      (check-field-equal? b 42)
+      (check-field-equal? sp 31)
       (send the-mpu des)
-      (check-equal? (get-field sp the-mpu) 30)
+      (check-field-equal? sp 30)
       (send the-mpu ins)
-      (check-equal? (get-field sp the-mpu) 31))
+      (check-field-equal? sp 31))
 
-    (test-case "Simple addition"
+    (test-case "Simple additions"
       (reset)
       (send the-mpu ldaa #x28)
       (send the-mpu ldab #x14)
       (send the-mpu aba)
-      (check-equal? (get-field a the-mpu) #x3C))
+      (check-field-equal? a #x3C)
+      (check-status?)
+
+      (send the-mpu adca #xFF) ;; equivalent to -1
+      (check-field-equal? a #x3B)
+      (check-status? carry half)
+
+      (send the-mpu adcb 1) ;; with carry should be +2
+      (check-field-equal? b #x16)
+      (check-status?)
+
+      (send the-mpu carry #t) ;; force carry
+      (send the-mpu adda 1) ;; should not be concerned with carry
+      (check-field-equal? a #x3C)
+      (check-status?)
+
+      (send the-mpu carry #t) ;; force carry
+      (send the-mpu addb 1) ;; should not be concerned with carry
+      (check-field-equal? b #x17)
+      (check-status?))
 
     (test-case "Overflow addition"
       (reset)
       (send the-mpu ldaa 127)
       (send the-mpu adda 127)
-      (check-equal? (get-field a the-mpu) 254)
-      (check-false (send the-mpu carry?))
-      (check-false (send the-mpu zero?))
-      (check-true (send the-mpu sign?))
-      (check-true (send the-mpu overflow?))
-      (check-true (send the-mpu half?))))
+      (check-field-equal? a 254)
+      (check-status? sign overflow half)))
 
   (run-tests mpu-instructions))
