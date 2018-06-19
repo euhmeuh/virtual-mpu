@@ -9,6 +9,7 @@
   split-into-bytes
   number->7bit-signed
   7bit-signed->number
+  boolean-bits->number
   neg
   16neg
   high
@@ -24,7 +25,10 @@
   4bit+
   shift-left
   arithmetic-shift-right
-  logical-shift-right)
+  logical-shift-right
+  read-flag
+  set-flag
+  clear-flag)
 
 (require
   racket/list)
@@ -79,6 +83,13 @@
 (define (7bit-signed->number value)
   (if (> value 127) (- value 256) value))
 
+(define (boolean-bits->number values)
+  (for/fold ([bin-num #b0])
+            ([value values] [i (in-naturals)])
+    (if value
+        (bitwise-ior bin-num (expt 2 i))
+        bin-num)))
+
 (define (neg val)
   (bitwise-xor #xFF (8bit+ val #xFF)))
 
@@ -124,3 +135,12 @@
 
 (define (logical-shift-right value)
   (arithmetic-shift value -1))
+
+(define (read-flag value flag)
+  (bitwise-and value flag))
+
+(define (set-flag value flag)
+  (bitwise-ior value flag))
+
+(define (clear-flag value flag)
+  (bitwise-and value (bitwise-not flag)))
