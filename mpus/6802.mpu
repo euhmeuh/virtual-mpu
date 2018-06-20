@@ -43,20 +43,25 @@
       (refresh! (result)
         (sign! result)
         (zero! result)
-        (overflow #f))
+        (overflow #f)
+        result)
 
-      (addition! (x y c result)
-        (carry! x y c)
-        (half-carry! x y c)
-        (overflow! x y c)
-        (zero! result)
-        (sign! result))
+      (addition! (x y [c 0])
+        (with result (8bit+ x y c)
+          (carry! x y c)
+          (half-carry! x y c)
+          (overflow! x y c)
+          (zero! result)
+          (sign! result)
+          result))
 
-      (substraction! (x y c result)
-        (borrow! x y c)
-        (overflow! x (8neg y) c)
-        (zero! result)
-        (sign! result)))
+      (substraction! (x y [c 0])
+        (with result (8bit- x y c)
+          (borrow! x y c)
+          (overflow! x (8neg y) c)
+          (zero! result)
+          (sign! result)
+          result)))
 
     ;; branches
     (bcc "Branch if carry clear" (rel) (branch (carry?) rel))
@@ -133,69 +138,26 @@
     (pulb "[SP] -> B" () ((pull!) . -> . b))
 
     ;; maths
-    (aba "A + B -> A" () (with result (8bit+ a b)
-                           (addition! a b 0 result)
-                           (result . -> . a)))
+    (aba "A + B -> A" () ((addition! a b) . -> . a))
+    (adca "A + ~a + carry -> A" (val) ((addition! a val (carry)) . -> . a))
+    (adcb "B + ~a + carry -> B" (val) ((addition! b val (carry)) . -> . b))
+    (adda "A + ~a -> A (no carry)" (val) ((addition! a val) . -> . a))
+    (addb "B + ~a -> B (no carry)" (val) ((addition! b val) . -> . b))
 
-    (adca "A + ~a + carry -> A" (val) (with result (8bit+ a val (carry))
-                                        (addition! a val (carry) result)
-                                        (result . -> . a)))
+    (sba "A - B -> A" () ((substraction! a b) . -> . a))
+    (sbca "A - ~a - carry -> A" (val) ((substraction! a val (carry)) . -> . a))
+    (sbcb "B - ~a - carry -> B" (val) ((substraction! b val (carry)) . -> . b))
+    (suba "A - ~a -> A (no carry)" (val) ((substraction! a val) . -> . a))
+    (subb "B - ~a -> B (no carry)" (val) ((substraction! b val) . -> . b))
 
-    (adcb "B + ~a + carry -> B" (val) (with result (8bit+ b val (carry))
-                                        (addition! b val (carry) result)
-                                        (result . -> . b)))
+    (anda "A AND ~a -> A" (val) ((refresh! (bitwise-and a val)) . -> . a))
+    (andb "B AND ~a -> B" (val) ((refresh! (bitwise-and b val)) . -> . b))
 
-    (adda "A + ~a -> A (no carry)" (val) (with result (8bit+ a val)
-                                           (addition! a val 0 result)
-                                           (result . -> . a)))
+    (oraa "A OR ~a -> A"  (val) ((refresh! (bitwise-ior a val)) . -> . a))
+    (orab "B OR ~a -> B"  (val) ((refresh! (bitwise-ior b val)) . -> . b))
 
-    (addb "B + ~a -> B (no carry)" (val) (with result (8bit+ b val)
-                                           (addition! b val 0 result)
-                                           (result . -> . b)))
-
-    (sba "A - B -> A" () (with result (8bit- a b)
-                           (substraction! a b 0 result)
-                           (result . -> . a)))
-
-    (sbca "A - ~a - carry -> A" (val) (with result (8bit- a val (carry))
-                                        (substraction! a val (carry) result)
-                                        (result . -> . a)))
-
-    (sbcb "B - ~a - carry -> B" (val) (with result (8bit- b val (carry))
-                                        (substraction! b val (carry) result)
-                                        (result . -> . b)))
-
-    (suba "A - ~a -> A (no carry)" (val) (with result (8bit- a val)
-                                           (substraction! a val 0 result)
-                                           (result . -> . a)))
-
-    (subb "B - ~a -> B (no carry)" (val) (with result (8bit- b val)
-                                           (substraction! b val 0 result)
-                                           (result . -> . b)))
-
-    (anda "A AND ~a -> A" (val) (with result (bitwise-and a val)
-                                  (refresh! result)
-                                  (result . -> . a)))
-
-    (andb "B AND ~a -> B" (val) (with result (bitwise-and b val)
-                                  (refresh! result)
-                                  (result . -> . b)))
-
-    (oraa "A OR ~a -> A"  (val) (with result (bitwise-ior a val)
-                                  (refresh! result)
-                                  (result . -> . a)))
-
-    (orab "B OR ~a -> B"  (val) (with result (bitwise-ior b val)
-                                  (refresh! result)
-                                  (result . -> . b)))
-
-    (eora "A XOR ~a -> A" (val) (with result (bitwise-xor a val)
-                                  (refresh! result)
-                                  (result . -> . a)))
-
-    (eorb "B XOR ~a -> B" (val) (with result (bitwise-xor b val)
-                                  (refresh! result)
-                                  (result . -> . b)))
+    (eora "A XOR ~a -> A" (val) ((refresh! (bitwise-xor a val)) . -> . a))
+    (eorb "B XOR ~a -> B" (val) ((refresh! (bitwise-xor b val)) . -> . b))
 
     (asl "~a shifted left" (addr) ((shift-left (ref addr)) . ~> . addr))
     (asla "A shifted left" () ((shift-left a) . -> . a))
@@ -212,21 +174,27 @@
     (dec "~a - 1" (addr) ((8bit- (ref addr) 1) . ~> . addr))
     (deca "A - 1 -> A" () ((8bit- a 1) . -> . a))
     (decb "B - 1 -> B" () ((8bit- b 1) . -> . b))
+
     (inc "~a + 1" (addr) ((8bit+ (ref addr) 1) . ~> . addr))
     (inca "A + 1" () ((8bit+ a 1) . -> . a))
     (incb "B + 1" () ((8bit+ b 1) . -> . b))
+
     (rol "Rotate ~a left through carry" () (void))
     (rola "Rotate A left through carry" () (void))
     (rolb "Rotate B left through carry" () (void))
+
     (ror "Rotate ~a right through carry" () (void))
     (rora "Rotate A right through carry" () (void))
     (rorb "Rotate B right through carry" () (void))
+
     (com "Complement ~a" () (void))
     (coma "Complement A" () (void))
     (comb "Complement B" () (void))
+
     (neg "Negate ~a" (addr) ((8bit- 0 (ref addr)) . ~> . addr))
     (nega "Negate A" () ((8bit- 0 a) . -> . a))
     (negb "Negate B" () ((8bit- 0 b) . -> . b))
+
     (daa "Decimal adjust A" () ((nib+nib
                                   (4bit+ (nib-high a)
                                          (if (>= (nib-high a) 10) 6 0))
