@@ -12,7 +12,9 @@
   ref
   check-register-equal?
   check-status?
-  set-register!)
+  set-register!
+  set-status!
+  run)
 
 (require
   racket/class
@@ -43,3 +45,9 @@
 
 (define-syntax-rule (set-register! register value)
   (set-field! register (current-mpu) value))
+
+(define-syntax-rule (set-status! bit bool)
+  (send (current-mpu) bit bool))
+
+(define-syntax-rule (run instruction arg ...)
+  (send (current-mpu) instruction arg ...))
