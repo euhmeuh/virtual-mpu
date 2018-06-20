@@ -263,3 +263,22 @@
   (run eorb #b11110000)
   (check-register-equal? b 0)
   (check-status? zero))
+
+(test-case "Status operations"
+  (reset)
+  (set-register! a #b00010000)
+  (run bita #b00010000)
+  (check-status?)
+
+  (set-register! b #b11111101)
+  (run bitb #b00000010)
+  (check-status? zero)
+
+  ;(run cba)
+  ;(run cmpa)
+  ;(run cmpb)
+  ;(run tst)
+  ;(run tsta)
+  ;(run tstb)
+  ;(run cpx)
+  )

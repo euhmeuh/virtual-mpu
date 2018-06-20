@@ -107,8 +107,8 @@
     (txs "IX - 1 -> SP" () ((16bit- ix 1) . -> . sp))
 
     ;; control
-    (dex "IX - 1 -> IX" () (let ([result (16bit- ix 1)]) (result . -> . ix) (zero! result)))
-    (inx "IX + 1 -> IX" () (let ([result (16bit+ ix 1)]) (result . -> . ix) (zero! result)))
+    (dex "IX - 1 -> IX" () (with result (16bit- ix 1) (result . -> . ix) (zero! result)))
+    (inx "IX + 1 -> IX" () (with result (16bit+ ix 1) (result . -> . ix) (zero! result)))
     (jmp "Jump to ~a" (abs) (abs . -> . pc))
     (jsr "Jump to subroutine at ~a" (abs) (push! (low pc))
                                           (push! (high pc))
@@ -202,15 +202,18 @@
                                          (if (or (>= (nib-low a) 10) (half?)) 6 0))) . -> . a))
 
     ;; status
-    (bita "A AND ~a -> SR" (val) (void))
-    (bitb "B AND ~a -> SR" (val) (void))
-    (cba "A - B -> SR" () (void))
-    (cmpa "A - ~a -> SR" (val) (void))
-    (cmpb "B - ~a -> SR" (val) (void))
-    (cpx "IX - ~a -> SR" (val) (void))
-    (tst "~a - 0 -> SR" (val) (void))
-    (tsta "A - 0 -> SR" () (void))
-    (tstb "B - 0 -> SR" () (void))
+    (bita "A AND ~a -> SR" (val) (refresh! (bitwise-and a val)))
+    (bitb "B AND ~a -> SR" (val) (refresh! (bitwise-and b val)))
+    (cba "A - B -> SR" () (substraction! a b))
+    (cmpa "A - ~a -> SR" (val) (substraction! a val))
+    (cmpb "B - ~a -> SR" (val) (substraction! b val))
+    (tst "~a - 0 -> SR" (val) (substraction! val 0) (carry #f) (overflow #f))
+    (tsta "A - 0 -> SR" () (substraction! a 0) (carry #f) (overflow #f))
+    (tstb "B - 0 -> SR" () (substraction! b 0) (carry #f) (overflow #f))
+    (cpx "IX - ~a -> SR" (val) (with result (16bit- ix val)
+                                 (sign! (high result))
+                                 (zero! result)
+                                 (overflow! (high ix) (high (16neg val)))))
 
     ;; clear
     (clr "Clear ~a" (addr) (0 . ~> . addr) (carry #f) (zero #t) (sign #f) (overflow #f))
