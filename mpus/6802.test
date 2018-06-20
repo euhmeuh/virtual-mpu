@@ -141,6 +141,13 @@
   (check-register-equal? a #x7F)
   (check-status? carry overflow))
 
+(test-case "Addition of two negative numbers generates zero and overflow"
+  (reset)
+  (run ldaa #x80)
+  (run adda #x80)
+  (check-register-equal? a 0)
+  (check-status? carry zero overflow))
+
 (test-case "Simple substraction"
   (reset)
   (set-register! a 53)
@@ -185,9 +192,23 @@
   (check-register-equal? b #x10)
   (check-status? carry))
 
-(test-case "Substraction generates overflow"
+(test-case "Substraction of two negatives generates overflow"
   (reset)
   (run ldaa 255)
   (run suba 128)
   (check-register-equal? a 127)
   (check-status? overflow))
+
+(test-case "Substraction of a negative by a positive generates overflow"
+  (reset)
+  (run ldaa 254)
+  (run suba 127)
+  (check-register-equal? a 127)
+  (check-status? overflow))
+
+(test-case "Substraction of a positive by a negative generates overflow"
+  (reset)
+  (run ldaa 127)
+  (run suba 255)
+  (check-register-equal? a 128)
+  (check-status? carry sign overflow))

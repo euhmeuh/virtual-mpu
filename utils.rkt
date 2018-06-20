@@ -10,7 +10,7 @@
   number->7bit-signed
   7bit-signed->number
   boolean-bits->number
-  neg
+  8neg
   16neg
   high
   low
@@ -90,7 +90,7 @@
         (bitwise-ior bin-num (expt 2 i))
         bin-num)))
 
-(define (neg val)
+(define (8neg val)
   (bitwise-xor #xFF (8bit+ val #xFF)))
 
 (define (16neg val)
@@ -120,7 +120,7 @@
 
 (define (8bit- . values)
   (apply 8bit+ (cons (car values)
-                     (map neg (cdr values)))))
+                     (map 8neg (cdr values)))))
 
 (define (16bit- . values)
   (apply 16bit+ (cons (car values)

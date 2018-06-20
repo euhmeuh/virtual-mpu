@@ -49,7 +49,7 @@
 
       (substraction! (x y c result)
         (borrow! x y c)
-        (overflow! x y c)
+        (overflow! x (8neg y) c)
         (zero! result)
         (sign! result)))
 

@@ -10,7 +10,7 @@
   ref
   wait-for-interrupt
   ;; binary operations
-  neg
+  8neg
   16neg
   high
   low
