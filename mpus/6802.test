@@ -185,9 +185,9 @@
   (check-register-equal? b #x10)
   (check-status? carry))
 
-(test-case "Substraction never generates overflow"
+(test-case "Substraction generates overflow"
   (reset)
-  (run ldaa 127)
-  (run suba #xFF)
-  (check-register-equal? a 128)
-  (check-status? sign carry))
+  (run ldaa 255)
+  (run suba 128)
+  (check-register-equal? a 127)
+  (check-status? overflow))
