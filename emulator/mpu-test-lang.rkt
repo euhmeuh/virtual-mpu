@@ -10,8 +10,9 @@
   current-mpu
   current-address-decoder
   ref
-  check-field-equal?
-  check-status?)
+  check-register-equal?
+  check-status?
+  set-register!)
 
 (require
   racket/class
@@ -31,11 +32,14 @@
        (current-mpu (new mpu%))
        expr ...)]))
 
-(define-syntax-rule (check-field-equal? field value)
-  (check-equal? (get-field field (current-mpu)) value))
+(define-syntax-rule (check-register-equal? register value)
+  (check-equal? (get-field register (current-mpu)) value))
 
 (define-syntax-rule (check-status? bit ...)
-  (check-field-equal? sr
+  (check-register-equal? sr
     (boolean-bits->number
       (for/list ([status-bit (status-info-bits (get-field status (current-mpu)))])
         (memq status-bit '(bit ...))))))
+
+(define-syntax-rule (set-register! register value)
+  (set-field! register (current-mpu) value))

@@ -16,10 +16,10 @@
   (send mpu ldab #x10)
   (send mpu lds #x04)
   (send mpu ldx #xA0)
-  (check-field-equal? a #x08)
-  (check-field-equal? b #x10)
-  (check-field-equal? sp #x04)
-  (check-field-equal? ix #xA0))
+  (check-register-equal? a #x08)
+  (check-register-equal? b #x10)
+  (check-register-equal? sp #x04)
+  (check-register-equal? ix #xA0))
 
 (test-case "Load relative data"
   (reset)
@@ -28,17 +28,17 @@
   (send mpu ldab (ref 1))
   (send mpu lds (ref 2))
   (send mpu ldx (ref 3))
-  (check-field-equal? a #x02)
-  (check-field-equal? b #x03)
-  (check-field-equal? sp #x05)
-  (check-field-equal? ix #x08))
+  (check-register-equal? a #x02)
+  (check-register-equal? b #x03)
+  (check-register-equal? sp #x05)
+  (check-register-equal? ix #x08))
 
 (test-case "Store data"
   (reset)
-  (set-field! a mpu #x0A)
-  (set-field! b mpu #x0B)
-  (set-field! sp mpu #x0C)
-  (set-field! ix mpu #x0D)
+  (set-register! a #x0A)
+  (set-register! b #x0B)
+  (set-register! sp #x0C)
+  (set-register! ix #x0D)
   (send mpu staa 0)
   (send mpu stab 1)
   (send mpu sts 2)
@@ -49,75 +49,75 @@
 (test-case "Branch"
   (reset)
   (send mpu bra 4)
-  (check-field-equal? pc 4)
+  (check-register-equal? pc 4)
 
   (send mpu sign #f)
   (send mpu bmi -4)
-  (check-field-equal? pc 4)
+  (check-register-equal? pc 4)
   (send mpu bpl -4)
-  (check-field-equal? pc 0)
+  (check-register-equal? pc 0)
 
   (send mpu sign #t)
   (send mpu bpl 4)
-  (check-field-equal? pc 0)
+  (check-register-equal? pc 0)
   (send mpu bmi 4)
-  (check-field-equal? pc 4))
+  (check-register-equal? pc 4))
 
 (test-case "Stack"
   (reset)
-  (set-field! sp mpu 31)
+  (set-register! sp 31)
   (send mpu ldaa 42)
   (send mpu psha)
   (send mpu ldab 20)
   (send mpu pshb)
-  (check-field-equal? sp 29)
+  (check-register-equal? sp 29)
   (check-equal? (subbytes memory 30)
                 (bytes 20 42))
   (send mpu pula)
   (send mpu pulb)
-  (check-field-equal? a 20)
-  (check-field-equal? b 42)
-  (check-field-equal? sp 31)
+  (check-register-equal? a 20)
+  (check-register-equal? b 42)
+  (check-register-equal? sp 31)
   (send mpu des)
-  (check-field-equal? sp 30)
+  (check-register-equal? sp 30)
   (send mpu ins)
-  (check-field-equal? sp 31))
+  (check-register-equal? sp 31))
 
 (test-case "Simple addition"
   (reset)
   (send mpu ldaa #x28)
   (send mpu ldab #x14)
   (send mpu aba)
-  (check-field-equal? a #x3C)
+  (check-register-equal? a #x3C)
   (check-status?))
 
 (test-case "Addition rolls over"
   (reset)
-  (set-field! a mpu #x7A)
+  (set-register! a #x7A)
   (send mpu adca #xFF) ;; equivalent to -1
-  (check-field-equal? a #x79)
+  (check-register-equal? a #x79)
   (check-status? carry half))
 
 (test-case "Addition with carry"
   (reset)
-  (set-field! b mpu #x14)
+  (set-register! b #x14)
   (send mpu carry #t)
   (send mpu adcb 1) ;; with carry should be +2
-  (check-field-equal? b #x16)
+  (check-register-equal? b #x16)
   (check-status?))
 
 (test-case "Additions without carry"
   (reset)
-  (set-field! a mpu #x14)
-  (set-field! b mpu #x24)
+  (set-register! a #x14)
+  (set-register! b #x24)
   (send mpu carry #t)
   (send mpu adda 1) ;; should not be concerned with carry
-  (check-field-equal? a #x15)
+  (check-register-equal? a #x15)
   (check-status?)
 
   (send mpu carry #t)
   (send mpu addb 1) ;; should not be concerned with carry
-  (check-field-equal? b #x25)
+  (check-register-equal? b #x25)
   (check-status?))
 
 (test-case "Addition generates half-carry"
@@ -130,14 +130,14 @@
   (reset)
   (send mpu ldaa 127)
   (send mpu adda 127)
-  (check-field-equal? a 254)
+  (check-register-equal? a 254)
   (check-status? sign overflow half))
 
 (test-case "Addition of two negative numbers generates positive overflow"
   (reset)
   (send mpu ldaa #x80)
   (send mpu adda #xFF)
-  (check-field-equal? a #x7F)
+  (check-register-equal? a #x7F)
   (check-status? carry overflow))
 
 (test-case "Simple substraction"
