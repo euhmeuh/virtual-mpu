@@ -12,14 +12,29 @@
 
 (test-case "Load immediate data"
   (reset)
-  (run ldaa #x08)
+  (run ldaa #xF8)
+  (check-register-equal? a #xF8)
+  (check-status? sign)
+
   (run ldab #x10)
-  (run lds #x04)
-  (run ldx #xA0)
-  (check-register-equal? a #x08)
   (check-register-equal? b #x10)
-  (check-register-equal? sp #x04)
-  (check-register-equal? ix #xA0))
+  (check-status?)
+
+  (run ldab #x00)
+  (check-register-equal? b #x00)
+  (check-status? zero)
+
+  (run lds #x0004)
+  (check-register-equal? sp #x0004)
+  (check-status?)
+
+  (run ldx #x00A0)
+  (check-register-equal? ix #x00A0)
+  (check-status?)
+
+  (run ldx #xFFA0)
+  (check-register-equal? ix #xFFA0)
+  (check-status? sign))
 
 (test-case "Load relative data"
   (reset)
@@ -212,3 +227,39 @@
   (run suba 255)
   (check-register-equal? a 128)
   (check-status? carry sign overflow))
+
+(test-case "AND"
+  (reset)
+  (run ldaa #b11110101)
+  (run anda #b01011111)
+  (check-register-equal? a #b01010101)
+  (check-status?)
+
+  (run ldab #b11110000)
+  (run andb #b00001111)
+  (check-register-equal? b 0)
+  (check-status? zero))
+
+(test-case "OR"
+  (reset)
+  (run ldaa #b11110101)
+  (run oraa #b01011111)
+  (check-register-equal? a #b11111111)
+  (check-status? sign)
+
+  (run ldab #b11110000)
+  (run orab #b11110001)
+  (check-register-equal? b #b11110001)
+  (check-status? sign))
+
+(test-case "XOR"
+  (reset)
+  (run ldaa #b11110101)
+  (run eora #b01011111)
+  (check-register-equal? a #b10101010)
+  (check-status? sign)
+
+  (run ldab #b11110000)
+  (run eorb #b11110000)
+  (check-register-equal? b 0)
+  (check-status? zero))

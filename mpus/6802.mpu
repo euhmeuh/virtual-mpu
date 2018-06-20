@@ -40,6 +40,11 @@
       (sign! (result)
         (sign (not (= 0 (bitwise-and result #b10000000)))))
 
+      (refresh! (result)
+        (sign! result)
+        (zero! result)
+        (overflow #f))
+
       (addition! (x y c result)
         (carry! x y c)
         (half-carry! x y c)
@@ -81,16 +86,16 @@
                                                 (branch #t rel))
 
     ;; moves
-    (ldaa "Load A <- ~a" (val) (val . -> . a) (sign! val) (zero! val) (overflow #f))
-    (ldab "Load B <- ~a" (val) (val . -> . b) (sign! val) (zero! val) (overflow #f))
+    (ldaa "Load A <- ~a" (val) (val . -> . a) (refresh! val))
+    (ldab "Load B <- ~a" (val) (val . -> . b) (refresh! val))
     (lds "Load SP <- ~a" (val) (val . -> . sp) (sign! (high val)) (zero! val) (overflow #f))
     (ldx "Load IX <- ~a" (val) (val . -> . ix) (sign! (high val)) (zero! val) (overflow #f))
-    (staa "Store A -> ~a" (addr) (a . ~> . addr) (sign! a) (zero! a) (overflow #f))
-    (stab "Store B -> ~a" (addr) (b . ~> . addr) (sign! b) (zero! b) (overflow #f))
+    (staa "Store A -> ~a" (addr) (a . ~> . addr) (refresh! a))
+    (stab "Store B -> ~a" (addr) (b . ~> . addr) (refresh! b))
     (sts "Store SP -> ~a" (addr) (sp . ~> . addr) (sign! (high sp)) (zero! sp) (overflow #f))
     (stx "Store IX -> ~a" (addr) (ix . ~> . addr) (sign! (high ix)) (zero! ix) (overflow #f))
-    (tab "A -> B" () (a . -> . b) (sign! a) (zero! a) (overflow #f))
-    (tba "B -> A" () (b . -> . a) (sign! b) (zero! b) (overflow #f))
+    (tab "A -> B" () (a . -> . b) (refresh! a))
+    (tba "B -> A" () (b . -> . a) (refresh! b))
     (tap "A -> SR" () (a . -> . sr))
     (tpa "SR -> A" () (sr . -> . a))
     (tsx "SP + 1 -> IX" () ((16bit+ sp 1) . -> . ix))
@@ -168,12 +173,29 @@
                                            (substraction! b val 0 result)
                                            (result . -> . b)))
 
-    (anda "A AND ~a -> A" (val) ((bitwise-and a val) . -> . a))
-    (andb "B AND ~a -> B" (val) ((bitwise-and b val) . -> . b))
-    (oraa "A OR ~a -> A"  (val) ((bitwise-ior a val) . -> . a))
-    (orab "B OR ~a -> B"  (val) ((bitwise-ior b val) . -> . b))
-    (eora "A XOR ~a -> A" (val) ((bitwise-xor a val) . -> . a))
-    (eorb "B XOR ~a -> B" (val) ((bitwise-xor b val) . -> . b))
+    (anda "A AND ~a -> A" (val) (with result (bitwise-and a val)
+                                  (refresh! result)
+                                  (result . -> . a)))
+
+    (andb "B AND ~a -> B" (val) (with result (bitwise-and b val)
+                                  (refresh! result)
+                                  (result . -> . b)))
+
+    (oraa "A OR ~a -> A"  (val) (with result (bitwise-ior a val)
+                                  (refresh! result)
+                                  (result . -> . a)))
+
+    (orab "B OR ~a -> B"  (val) (with result (bitwise-ior b val)
+                                  (refresh! result)
+                                  (result . -> . b)))
+
+    (eora "A XOR ~a -> A" (val) (with result (bitwise-xor a val)
+                                  (refresh! result)
+                                  (result . -> . a)))
+
+    (eorb "B XOR ~a -> B" (val) (with result (bitwise-xor b val)
+                                  (refresh! result)
+                                  (result . -> . b)))
 
     (asl "~a shifted left" (addr) ((shift-left (ref addr)) . ~> . addr))
     (asla "A shifted left" () ((shift-left a) . -> . a))
