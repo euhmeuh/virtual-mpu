@@ -20,8 +20,8 @@
   racket/match
   (only-in racket/contract/base >/c)
   anaphoric
-  "../op-table.rkt"
-  "../utils.rkt")
+  virtual-mpu/mpu-lang/op-table
+  virtual-mpu/utils)
 
 (struct program (source-tree expressions) #:transparent)
 (struct line (expression comment) #:transparent)

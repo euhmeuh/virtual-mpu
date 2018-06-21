@@ -1,4 +1,4 @@
-#lang reader "asm-reader.rkt"
+#lang virtual-mpu/asm
 $16 nop
 ; mul  ( y x -- product )
 valx    db 0

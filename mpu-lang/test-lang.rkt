@@ -5,8 +5,8 @@
   (rename-out [module-begin #%module-begin])
   (all-from-out rackunit)
   (all-from-out racket/class)
-  (all-from-out "../utils.rkt")
-  (all-from-out "../emulator/mpu-structs.rkt")
+  (all-from-out virtual-mpu/utils)
+  (all-from-out "structs.rkt")
   current-mpu
   current-address-decoder
   ref
@@ -19,10 +19,10 @@
 (require
   racket/class
   rackunit
-  "../emulator/mpu-structs.rkt"
-  (only-in "../emulator/emulator.rkt" current-address-decoder)
-  (only-in "../emulator/mpu-lang.rkt" ref)
-  "../utils.rkt")
+  (only-in virtual-mpu/emulator/emulator current-address-decoder)
+  virtual-mpu/utils
+  (only-in "lang.rkt" ref)
+  "structs.rkt")
 
 (define current-mpu (make-parameter #f))
 

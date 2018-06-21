@@ -1,4 +1,4 @@
-#lang s-exp "../emulator/mpu-lang.rkt"
+#lang virtual-mpu/mpu
 (mpu "6802"
   (registers (a b sr [ix 16] [sp 16] [pc 16]))
   (status sr (carry overflow zero sign interrupt half))

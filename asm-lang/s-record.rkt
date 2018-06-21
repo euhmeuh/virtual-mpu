@@ -5,7 +5,7 @@
 
 (require
   racket/string
-  "../utils.rkt")
+  virtual-mpu/utils)
 
 (define (bytes->s-record bytes #:header [head-string #f])
   (when head-string

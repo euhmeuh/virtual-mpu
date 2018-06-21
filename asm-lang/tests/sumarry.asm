@@ -1,4 +1,4 @@
-#lang reader "asm-reader.rkt"
+#lang virtual-mpu/asm
 array = $20
 sum     db 0
 sumarry ldx #array  ;X = array

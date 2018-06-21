@@ -8,10 +8,10 @@
   racket/list
   racket/match
   racket/contract/base
+  virtual-mpu/utils
   "area.rkt"
   "element.rkt"
-  "display.rkt"
-  "../../utils.rkt")
+  "display.rkt")
 
 (define input-mode/c (symbols 'str 'dec 'hex 'bin))
 

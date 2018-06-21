@@ -9,8 +9,8 @@
   current-program-counter-mutator)
 
 (require
-  "../op-table.rkt"
-  "../utils.rkt")
+  virtual-mpu/mpu-lang/op-table
+  virtual-mpu/utils)
 
 (define current-address-decoder (make-parameter #f))
 (define current-program-counter-accessor (make-parameter #f))

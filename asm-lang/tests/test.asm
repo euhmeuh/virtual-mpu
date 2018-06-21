@@ -1,4 +1,4 @@
-#lang reader "asm-reader.rkt"
+#lang virtual-mpu/asm
 color = 41
 screen = $ABCD
 start sta a color+1,x

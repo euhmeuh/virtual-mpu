@@ -40,11 +40,11 @@
     racket/syntax
     syntax/parse
     syntax/stx)
-  (only-in "emulator.rkt"
+  (only-in virtual-mpu/emulator/emulator
     memory-read
     memory-write!)
-  "mpu-structs.rkt"
-  "../utils.rkt")
+  virtual-mpu/utils
+  "structs.rkt")
 
 (define-syntax-rule (module-begin expr)
   (#%module-begin

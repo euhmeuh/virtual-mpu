@@ -7,7 +7,7 @@
   racket/port
   syntax/strip-context
   brag/support
-  "asm-parser.rkt")
+  "parser.rkt")
 
 (define (asm-read in)
   (syntax->datum
@@ -16,7 +16,7 @@
 (define (asm-read-syntax src in)
   (with-syntax ([parse-tree (parse src (make-tokenizer in src))])
     (strip-context
-      #'(module asm-file "asm-expander.rkt"
+      #'(module asm-file virtual-mpu/asm-lang/expander
           parse-tree))))
 
 (define (make-tokenizer port [path #f])

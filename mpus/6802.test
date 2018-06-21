@@ -1,4 +1,4 @@
-#lang s-exp "../emulator/mpu-test-lang.rkt"
+#lang virtual-mpu/test
 
 (load-mpu "mpus/6802.mpu")
 

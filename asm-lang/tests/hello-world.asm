@@ -1,4 +1,4 @@
-#lang reader "asm-reader.rkt"
+#lang virtual-mpu/asm
 ; Hello world program in 6802 assembly
 ; by Jérôme Martin (euhmeuh)
 ; Copyright © 2018 All rights reserved

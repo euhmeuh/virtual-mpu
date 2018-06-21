@@ -5,12 +5,11 @@
   racket/cmdline
   racket/function
   racket/string
-  "assembler/assembler.rkt"
-  "assembler/s-record.rkt"
-  "emulator/emulator.rkt"
-  "op-table.rkt"
-  "utils.rkt"
-  "machines/ril011w.rkt"
+  virtual-mpu/assemble
+  virtual-mpu/s-record
+  virtual-mpu/op-table
+  virtual-mpu/emulate
+  virtual-mpu/utils
   command-tree)
 
 (current-op-table (call-with-input-file "mpus/6802.tab"
@@ -34,5 +33,7 @@
               (to-hex ,assemble-to-hex)
               (to-s-record ,assemble-to-s-record)]
     [emulate  ,(lambda (kernel)
-                 (emulate kernel ril011w-address-decode))])
+                 (emulate kernel
+                          (dynamic-require "machines/ril011w.rkt"
+                                           'ril011w-address-decode)))])
   (current-command-line-arguments))
