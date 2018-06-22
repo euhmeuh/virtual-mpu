@@ -4,10 +4,14 @@
 
 (define deps '("base"
                "brag"
+               "br-parser-tools-lib"
                "anaphoric"
-               "reprovide-lang"))
+               "reprovide-lang"
+               "command-tree"
+               "rackunit-lib"
+               "charterm"))
 
-(define build-deps '("rackunit"))
+(define build-deps '())
 
 (define racket-launcher-names '("virtual-mpu"))
 (define racket-launcher-libraries '("cli"))
