@@ -24,9 +24,14 @@
 (define (emulate-machine machine kernel)
   (emulate machine kernel))
 
+(define (test-mpu mpu)
+  (local-require rackunit/text-ui)
+  (run-tests (dynamic-require (format "mpus/~a.test" mpu) 'suite)))
+
 (command-tree
   `([assemble (to-binary ,assemble-to-binary)
               (to-hex ,assemble-to-hex)
               (to-s-record ,assemble-to-s-record)]
-    [emulate ,emulate-machine])
+    [emulate ,emulate-machine]
+    [test ,test-mpu])
   (current-command-line-arguments))

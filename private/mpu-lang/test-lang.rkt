@@ -28,12 +28,20 @@
 (define current-mpu (make-parameter #f))
 
 (define-syntax module-begin
-  (syntax-rules ()
-    [(_ (load-mpu mpu-file) expr ...)
+  (syntax-rules (load-mpu initialize before-each test-case)
+    [(_ (load-mpu mpu-file)
+        (initialize init ...)
+        (before-each bef ...)
+        (test-case name expr ...) ...)
      (#%module-begin
        (define mpu% (dynamic-require mpu-file 'mpu%))
        (current-mpu (new mpu%))
-       expr ...)]))
+       init ...
+       (define (before-thunk) bef ...)
+       (define/provide-test-suite suite
+         (test-case name
+           (before-thunk)
+           expr ...) ...))]))
 
 (define-syntax-rule (check-register-equal? register value)
   (check-equal? (get-field register (current-mpu)) value))
