@@ -1,2 +1,2 @@
 #lang reprovide
-(only-in "emulator/emulator.rkt" emulate)
+(only-in virtual-mpu/private/emulator/emulator emulate)

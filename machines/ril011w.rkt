@@ -1,10 +1,13 @@
 #lang racket/base
 
 (provide
-  ril011w-address-decode)
+  mpu
+  address-decoder)
 
 (require
-  "../utils.rkt")
+  virtual-mpu/utils)
+
+(define mpu "6802")
 
 ;; RIL011W memory map:
 ;; [0x0000...0x0FFF][0x1000 0x1001][0x1002...0X1FFF][0x2000...0xFFF7]
@@ -17,7 +20,7 @@
 (define acia (make-bytes 2))
 (define ram (make-bytes (* 56 1024)))
 
-(define (ril011w-address-decode addr)
+(define (address-decoder addr)
   (cond
     [(<= addr #x0FFF) rom]
     [(<= addr #x1FFF) acia]

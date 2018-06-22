@@ -19,7 +19,8 @@
 (require
   racket/class
   rackunit
-  (only-in virtual-mpu/emulator/emulator current-address-decoder)
+  (only-in virtual-mpu/private/emulator/emulator
+           current-address-decoder)
   virtual-mpu/utils
   (only-in "lang.rkt" ref)
   "structs.rkt")

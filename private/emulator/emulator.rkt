@@ -9,17 +9,31 @@
   current-program-counter-mutator)
 
 (require
-  virtual-mpu/mpu-lang/op-table
+  virtual-mpu/op-table
   virtual-mpu/utils)
 
 (define current-address-decoder (make-parameter #f))
 (define current-program-counter-accessor (make-parameter #f))
 (define current-program-counter-mutator (make-parameter #f))
 
-(define (emulate kernel-filepath addr-decoder)
-  (current-address-decoder addr-decoder)
-  (call-with-input-file kernel-filepath init-memory)
-  (emulation-loop))
+(define (call-with-machine machine-filepath thunk)
+  (define pc 0) ;; TODO: retrieve from configuration
+  (parameterize ([current-op-table (read-mpu-op-table (dynamic-require machine-filepath 'mpu))]
+                 [current-address-decoder (dynamic-require machine-filepath 'address-decoder)]
+                 [current-program-counter-accessor (lambda () pc)]
+                 [current-program-counter-mutator (lambda (value) (set! pc value))])
+    (thunk)))
+
+(define (read-mpu-op-table mpu-name)
+  (call-with-input-file
+    (format "mpus/~a.tab" mpu-name)
+    (lambda (in) (read in))))
+
+(define (emulate machine-filepath kernel-filepath)
+  (call-with-machine machine-filepath
+    (lambda ()
+      (call-with-input-file kernel-filepath init-memory)
+      (emulation-loop))))
 
 (define (init-memory in)
   (for ([byte (in-port read-byte in)]

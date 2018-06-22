@@ -1,2 +1,2 @@
 #lang reprovide
-(only-in "asm-lang/assembler.rkt" assemble)
+(only-in virtual-mpu/private/asm-lang/assembler assemble)

@@ -16,7 +16,7 @@
 (define (asm-read-syntax src in)
   (with-syntax ([parse-tree (parse src (make-tokenizer in src))])
     (strip-context
-      #'(module asm-file virtual-mpu/asm-lang/expander
+      #'(module asm-file virtual-mpu/private/asm-lang/expander
           parse-tree))))
 
 (define (make-tokenizer port [path #f])

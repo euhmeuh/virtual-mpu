@@ -1,2 +1,2 @@
-#lang reprovide
-"asm-lang/reader.rkt"
+#lang racket/base
+(module reader reprovide virtual-mpu/private/asm-lang/reader)

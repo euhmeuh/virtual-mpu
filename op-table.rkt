@@ -1,2 +1,2 @@
 #lang reprovide
-"mpu-lang/op-table.rkt"
+virtual-mpu/private/mpu-lang/op-table

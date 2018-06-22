@@ -1,2 +1,2 @@
-#lang reprovide
-"mpu-lang/test-lang.rkt"
+#lang racket/base
+(module reader syntax/module-reader virtual-mpu/private/mpu-lang/test-lang)

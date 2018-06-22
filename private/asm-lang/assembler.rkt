@@ -20,7 +20,7 @@
   racket/match
   (only-in racket/contract/base >/c)
   anaphoric
-  virtual-mpu/mpu-lang/op-table
+  virtual-mpu/op-table
   virtual-mpu/utils)
 
 (struct program (source-tree expressions) #:transparent)

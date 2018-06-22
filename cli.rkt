@@ -5,35 +5,28 @@
   racket/cmdline
   racket/function
   racket/string
-  virtual-mpu/assemble
-  virtual-mpu/s-record
-  virtual-mpu/op-table
-  virtual-mpu/emulate
-  virtual-mpu/utils
+  virtual-mpu
   command-tree)
 
-(current-op-table (call-with-input-file "mpus/6802.tab"
-                    (lambda (in) (read in))))
+(define (assemble-to-binary mpu assembly)
+  (display (assemble assembly)))
 
-(define (assemble-to-binary filepath)
-  (display (assemble filepath)))
-
-(define (assemble-to-hex filepath)
+(define (assemble-to-hex mpu assembly)
   (displayln
     (string-join
       (map (curry format-hex)
-           (bytes->list (assemble filepath))))))
+           (bytes->list (assemble assembly))))))
 
-(define (assemble-to-s-record filepath [header #f])
-  (bytes->s-record (assemble filepath)
+(define (assemble-to-s-record mpu assembly [header #f])
+  (bytes->s-record (assemble assembly)
                    #:header header))
+
+(define (emulate-machine machine kernel)
+  (emulate machine kernel))
 
 (command-tree
   `([assemble (to-binary ,assemble-to-binary)
               (to-hex ,assemble-to-hex)
               (to-s-record ,assemble-to-s-record)]
-    [emulate  ,(lambda (kernel)
-                 (emulate kernel
-                          (dynamic-require "machines/ril011w.rkt"
-                                           'ril011w-address-decode)))])
+    [emulate ,emulate-machine])
   (current-command-line-arguments))

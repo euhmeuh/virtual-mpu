@@ -40,7 +40,7 @@
     racket/syntax
     syntax/parse
     syntax/stx)
-  (only-in virtual-mpu/emulator/emulator
+  (only-in virtual-mpu/private/emulator/emulator
     memory-read
     memory-write!)
   virtual-mpu/utils

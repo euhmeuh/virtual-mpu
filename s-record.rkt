@@ -1,2 +1,2 @@
 #lang reprovide
-"asm-lang/s-record.rkt"
+virtual-mpu/private/asm-lang/s-record
