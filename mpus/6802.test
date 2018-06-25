@@ -3,13 +3,12 @@
 (load-mpu "mpus/6802.mpu")
 
 (initialize
-  (define mpu (current-mpu))
   (define memory (make-bytes 32))
   (current-address-decoder (lambda (addr) memory)))
 
 (before-each
   (bytes-fill! memory 0)
-  (send mpu reset))
+  (send (current-mpu) reset))
 
 (test-case "Load immediate data"
   (run ldaa #xF8)
