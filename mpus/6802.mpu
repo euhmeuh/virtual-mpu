@@ -1,7 +1,7 @@
 #lang virtual-mpu/mpu
 (mpu "6802"
   (registers (a b sr [ix 16] [sp 16] [pc 16]))
-  (status sr (carry overflow zero sign interrupt half))
+  (status sr (carry overflow zero negative interrupt half))
   (interrupts interrupt [irq #xFFF8] [soft #xFFFA] [nmi #xFFFC] [restart #xFFFE])
   (operations
 
@@ -37,11 +37,11 @@
       (zero! (result)
         (zero (= 0 result)))
 
-      (sign! (result)
-        (sign (not (= 0 (bitwise-and result #b10000000)))))
+      (negative! (result)
+        (negative (not (= 0 (bitwise-and result #b10000000)))))
 
       (refresh! (result)
-        (sign! result)
+        (negative! result)
         (zero! result)
         (overflow #f)
         result)
@@ -52,7 +52,7 @@
           (half-carry! x y c)
           (overflow! x y c)
           (zero! result)
-          (sign! result)
+          (negative! result)
           result))
 
       (substraction! (x y [c 0])
@@ -60,7 +60,7 @@
           (borrow! x y c)
           (overflow! x (8neg y) c)
           (zero! result)
-          (sign! result)
+          (negative! result)
           result)))
 
     ;; branches
@@ -73,17 +73,17 @@
     (beq "Branch if =0" (rel) (branch (zero?) rel))
     (bne "Branch if !=0" (rel) (branch (not (zero?)) rel))
 
-    (bge "Branch if >=0" (rel) (branch (not (xor (sign?) (overflow?))) rel))
-    (blt "Branch if <0" (rel) (branch (xor (sign?) (overflow?)) rel))
+    (bge "Branch if >=0" (rel) (branch (not (xor (negative?) (overflow?))) rel))
+    (blt "Branch if <0" (rel) (branch (xor (negative?) (overflow?)) rel))
 
-    (ble "Branch if <=0" (rel) (branch (or (zero?) (xor (sign?) (overflow?))) rel))
-    (bgt "Branch if >0" (rel) (branch (not (or (zero?) (xor (sign?) (overflow?)))) rel))
+    (ble "Branch if <=0" (rel) (branch (or (zero?) (xor (negative?) (overflow?))) rel))
+    (bgt "Branch if >0" (rel) (branch (not (or (zero?) (xor (negative?) (overflow?)))) rel))
 
     (bhi "Branch if higher" (rel) (branch (not (or (zero?) (carry?))) rel))
-    (bls "Branch if lesser" (rel) (branch (or (zero?) (carry?)) rel))
+    (bls "Branch if lower or same" (rel) (branch (or (zero?) (carry?)) rel))
 
-    (bmi "Branch if minus to ~a" (rel) (branch (sign?) rel))
-    (bpl "Branch if plus to ~a" (rel) (branch (not (sign?)) rel))
+    (bmi "Branch if minus to ~a" (rel) (branch (negative?) rel))
+    (bpl "Branch if plus to ~a" (rel) (branch (not (negative?)) rel))
 
     (bra "Branch always to ~a" (rel) (branch #t rel))
     (bsr "Branch always to subroutine ~a" (rel) (push! (low pc))
@@ -93,12 +93,12 @@
     ;; moves
     (ldaa "Load A <- ~a" (val) (val . -> . a) (refresh! val))
     (ldab "Load B <- ~a" (val) (val . -> . b) (refresh! val))
-    (lds "Load SP <- ~a" (val) (val . -> . sp) (sign! (high val)) (zero! val) (overflow #f))
-    (ldx "Load IX <- ~a" (val) (val . -> . ix) (sign! (high val)) (zero! val) (overflow #f))
+    (lds "Load SP <- ~a" (val) (val . -> . sp) (negative! (high val)) (zero! val) (overflow #f))
+    (ldx "Load IX <- ~a" (val) (val . -> . ix) (negative! (high val)) (zero! val) (overflow #f))
     (staa "Store A -> ~a" (addr) (a . ~> . addr) (refresh! a))
     (stab "Store B -> ~a" (addr) (b . ~> . addr) (refresh! b))
-    (sts "Store SP -> ~a" (addr) (sp . ~> . addr) (sign! (high sp)) (zero! sp) (overflow #f))
-    (stx "Store IX -> ~a" (addr) (ix . ~> . addr) (sign! (high ix)) (zero! ix) (overflow #f))
+    (sts "Store SP -> ~a" (addr) (sp . ~> . addr) (negative! (high sp)) (zero! sp) (overflow #f))
+    (stx "Store IX -> ~a" (addr) (ix . ~> . addr) (negative! (high ix)) (zero! ix) (overflow #f))
     (tab "A -> B" () (a . -> . b) (refresh! a))
     (tba "B -> A" () (b . -> . a) (refresh! b))
     (tap "A -> SR" () (a . -> . sr))
@@ -163,9 +163,9 @@
     (asla "A shifted left" () ((shift-left a) . -> . a))
     (aslb "B shifted left" () ((shift-left b) . -> . b))
 
-    (asr "~a shifted right" (addr) ((arithmetic-shift-right (ref addr)) . ~> . addr) (sign #f))
-    (asra "A shifted right" () ((arithmetic-shift-right a) . -> . a) (sign #f))
-    (asrb "B shifted right" () ((arithmetic-shift-right b) . -> . b) (sign #f))
+    (asr "~a shifted right" (addr) ((arithmetic-shift-right (ref addr)) . ~> . addr) (negative #f))
+    (asra "A shifted right" () ((arithmetic-shift-right a) . -> . a) (negative #f))
+    (asrb "B shifted right" () ((arithmetic-shift-right b) . -> . b) (negative #f))
 
     (lsr "~a logically shifted right" (addr) ((logical-shift-right (ref addr)) . ~> . addr))
     (lsra "A logically shifted right" () ((logical-shift-right a) . -> . a))
@@ -211,14 +211,16 @@
     (tsta "A - 0 -> SR" () (substraction! a 0) (carry #f) (overflow #f))
     (tstb "B - 0 -> SR" () (substraction! b 0) (carry #f) (overflow #f))
     (cpx "IX - ~a -> SR" (val) (with result (16bit- ix val)
-                                 (sign! (high result))
+                                 ;; NOTE: this instructions does not set the carry flag
+                                 ;;       so one cannot use unsigned branching
+                                 (negative! (high result))
                                  (zero! result)
                                  (overflow! (high ix) (high (16neg val)))))
 
     ;; clear
-    (clr "Clear ~a" (addr) (0 . ~> . addr) (carry #f) (zero #t) (sign #f) (overflow #f))
-    (clra "Clear A" () (0 . -> . a) (carry #f) (zero #t) (sign #f) (overflow #f))
-    (clrb "Clear B" () (0 . -> . b) (carry #f) (zero #t) (sign #f) (overflow #f))
+    (clr "Clear ~a" (addr) (0 . ~> . addr) (carry #f) (zero #t) (negative #f) (overflow #f))
+    (clra "Clear A" () (0 . -> . a) (carry #f) (zero #t) (negative #f) (overflow #f))
+    (clrb "Clear B" () (0 . -> . b) (carry #f) (zero #t) (negative #f) (overflow #f))
     (clc "Clear carry" () (carry #f))
     (cli "Clear interrupt" () (interrupt #f))
     (clv "Clear overflow" () (overflow #f))

@@ -14,7 +14,7 @@
 (test-case "Load immediate data"
   (run ldaa #xF8)
   (check-register-equal? a #xF8)
-  (check-status? sign)
+  (check-status? negative)
 
   (run ldab #x10)
   (check-register-equal? b #x10)
@@ -34,7 +34,7 @@
 
   (run ldx #xFFA0)
   (check-register-equal? ix #xFFA0)
-  (check-status? sign))
+  (check-status? negative))
 
 (test-case "Load relative data"
   (bytes-copy! memory 0 (bytes #x02 #x03 #x05 #x08))
@@ -63,13 +63,13 @@
   (run bra 4)
   (check-register-equal? pc 4)
 
-  (run sign #f)
+  (run negative #f)
   (run bmi -4)
   (check-register-equal? pc 4)
   (run bpl -4)
   (check-register-equal? pc 0)
 
-  (run sign #t)
+  (run negative #t)
   (run bpl 4)
   (check-register-equal? pc 0)
   (run bmi 4)
@@ -137,7 +137,7 @@
   (run ldaa 127)
   (run adda 127)
   (check-register-equal? a 254)
-  (check-status? sign overflow half))
+  (check-status? negative overflow half))
 
 (test-case "Addition of two negative numbers generates positive overflow"
   (run ldaa #x80)
@@ -162,7 +162,7 @@
   (set-register! a 4)
   (run sbca 8)
   (check-register-equal? a 252)
-  (check-status? carry sign))
+  (check-status? carry negative))
 
 (test-case "Substraction with carry"
   (set-register! b #x14)
@@ -206,7 +206,7 @@
   (run ldaa 127)
   (run suba 255)
   (check-register-equal? a 128)
-  (check-status? carry sign overflow))
+  (check-status? carry negative overflow))
 
 (test-case "AND"
   (run ldaa #b11110101)
@@ -223,18 +223,18 @@
   (run ldaa #b11110101)
   (run oraa #b01011111)
   (check-register-equal? a #b11111111)
-  (check-status? sign)
+  (check-status? negative)
 
   (run ldab #b11110000)
   (run orab #b11110001)
   (check-register-equal? b #b11110001)
-  (check-status? sign))
+  (check-status? negative))
 
 (test-case "XOR"
   (run ldaa #b11110101)
   (run eora #b01011111)
   (check-register-equal? a #b10101010)
-  (check-status? sign)
+  (check-status? negative)
 
   (run ldab #b11110000)
   (run eorb #b11110000)
@@ -250,11 +250,34 @@
   (run bitb #b00000010)
   (check-status? zero)
 
-  ;(run cba)
-  ;(run cmpa)
-  ;(run cmpb)
-  ;(run tst)
-  ;(run tsta)
-  ;(run tstb)
-  ;(run cpx)
-  )
+  (set-register! a 12)
+  (set-register! b 10)
+  (run cba)
+  (check-status?)
+
+  (set-register! a 12)
+  (run cmpa 13)
+  (check-status? carry negative)
+
+  (set-register! b 4)
+  (run cmpb 4)
+  (check-status? zero)
+
+  (run tst #x7F)
+  (check-status?)
+
+  (set-register! a #x80)
+  (run tsta)
+  (check-status? negative)
+
+  (set-register! b 0)
+  (run tstb)
+  (check-status? zero)
+
+  (set-register! ix #xABCD)
+  (run cpx #xFFFF)
+  (check-status? negative)
+
+  (set-register! ix #xABCD)
+  (run cpx #xABCD)
+  (check-status? zero))

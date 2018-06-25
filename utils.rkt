@@ -94,7 +94,7 @@
   (bitwise-xor #xFF (8bit+ val #xFF)))
 
 (define (16neg val)
-  (bitwise-xor #xFFFF (8bit+ val #xFFFF)))
+  (bitwise-xor #xFFFF (16bit+ val #xFFFF)))
 
 (define (high val)
   (bitwise-and (arithmetic-shift val -8) #xFF))
