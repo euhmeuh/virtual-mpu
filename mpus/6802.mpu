@@ -20,6 +20,8 @@
       (go-to-interrupt (int)
         ((high+low (ref int) (ref (+ 1 int))) . -> . pc))
 
+      ;; setters for flags
+
       (carry! (x y [c 0])
         (carry (> (+ x y c) 255)))
 
@@ -40,6 +42,8 @@
       (negative! (result)
         (negative (not (= 0 (bitwise-and result #b10000000)))))
 
+      ;; common flag changes
+
       (refresh! (result)
         (negative! result)
         (zero! result)
@@ -59,6 +63,14 @@
         (with result (8bit- x y c)
           (borrow! x y c)
           (overflow! x (8neg y) c)
+          (zero! result)
+          (negative! result)
+          result))
+
+      (negate! (x)
+        (with result (8neg x)
+          (carry (not (= 0 result)))
+          (overflow (= result #b10000000))
           (zero! result)
           (negative! result)
           result)))
@@ -187,13 +199,13 @@
     (rora "Rotate A right through carry" () (void))
     (rorb "Rotate B right through carry" () (void))
 
-    (com "Complement ~a" () (void))
-    (coma "Complement A" () (void))
-    (comb "Complement B" () (void))
+    (com "Complement ~a" (addr) ((refresh! (bitwise-xor #xFF (ref addr))) . ~> . addr) (carry #t))
+    (coma "Complement A" () ((refresh! (bitwise-xor #xFF a)) . -> . a) (carry #t))
+    (comb "Complement B" () ((refresh! (bitwise-xor #xFF b)) . -> . b) (carry #t))
 
-    (neg "Negate ~a" (addr) ((8bit- 0 (ref addr)) . ~> . addr))
-    (nega "Negate A" () ((8bit- 0 a) . -> . a))
-    (negb "Negate B" () ((8bit- 0 b) . -> . b))
+    (neg "Negate ~a" (addr) ((negate! (ref addr)) . ~> . addr))
+    (nega "Negate A" () ((negate! a) . -> . a))
+    (negb "Negate B" () ((negate! b) . -> . b))
 
     (daa "Decimal adjust A" () ((nib+nib
                                   (4bit+ (nib-high a)
@@ -211,7 +223,7 @@
     (tsta "A - 0 -> SR" () (substraction! a 0) (carry #f) (overflow #f))
     (tstb "B - 0 -> SR" () (substraction! b 0) (carry #f) (overflow #f))
     (cpx "IX - ~a -> SR" (val) (with result (16bit- ix val)
-                                 ;; NOTE: this instructions does not set the carry flag
+                                 ;; NOTE: this operation does not set the carry flag
                                  ;;       so one cannot use unsigned branching
                                  (negative! (high result))
                                  (zero! result)
