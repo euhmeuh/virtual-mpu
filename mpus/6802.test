@@ -284,8 +284,37 @@
 (test-case "Arithmetic shift left")
 (test-case "Arithmetic shift right")
 (test-case "Logical shift right")
-(test-case "Decrease")
-(test-case "Increase")
+
+(test-case "Decrease"
+  (run dec 0)
+  (check-equal? (ref 0) #xFF)
+  (check-status? negative)
+
+  (set-register! a 43)
+  (run deca)
+  (check-register-equal? a 42)
+  (check-status?)
+
+  (set-register! b 128)
+  (run decb)
+  (check-register-equal? b 127)
+  (check-status? overflow))
+
+(test-case "Increase"
+  (run inc 0)
+  (check-equal? (ref 0) 1)
+  (check-status?)
+
+  (set-register! a 43)
+  (run inca)
+  (check-register-equal? a 44)
+  (check-status?)
+
+  (set-register! b 127)
+  (run incb)
+  (check-register-equal? b 128)
+  (check-status? negative overflow))
+
 (test-case "Rotate left")
 (test-case "Rotate right")
 
