@@ -1,6 +1,31 @@
 # virtual-mpu
 Old Microprocessor Emulator and Assembler
 
+### Installation
+
+`raco pkg install virtual-mpu`
+
+
+### Assembler Usage
+
+#### Generate a [S-Record file](https://en.wikipedia.org/wiki/SREC_(file_format)) (Motorola format):
+`virtual-mpu assemble to-s-record myfile.asm > myfile.srec` 
+
+#### Display result in hexadecimal in the terminal (useful for debugging):
+`virtual-mpu assemble to-hex myfile.asm` 
+
+#### Put result into a program binary:
+`virtual-mpu assemble to-binary myfile.asm > myfile.bin` 
+
+
+### Emulator usage
+
+#### Start the emulator (WIP)
+
+*(this does not work yet)*
+
+`virtual-mpu emulate machines/mymachine.rkt mykernel.bin`
+
 ### Supported MPUs:
 
 - Motorola 6802 (used mostly in pinball machines)
